@@ -2,6 +2,6 @@
 
 #include <stdio.h>
 
-void hello(void) {
-    printf("Hello, World!\n");
+int pad_dummy(void) {
+    return 13;
 }
