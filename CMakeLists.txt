@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14..3.25)
 project(neopad
         VERSION 0.1
         DESCRIPTION "Modern C reimplementation of Pad++"
-        LANGUAGES C CXX)  # CXX is just for testing...
+        LANGUAGES C)
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory.
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
