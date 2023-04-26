@@ -1,3 +1,3 @@
 # NeoPad
 
-A modern C11 rewrite of Pad++.
+A modern C17 rewrite of Pad++.
