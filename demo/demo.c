@@ -1,14 +1,112 @@
+#define DEMO_MODE_OPENGL 1
+#define DEMO_MODE_BGFX 2
+
+//#define DEMO_MODE DEMO_MODE_OPENGL
+#define DEMO_MODE DEMO_MODE_BGFX
+
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
-
 #include <OpenGL/gl3.h>
-
 #endif
+
+#include <bgfx/c99/bgfx.h>
+
+#define GLFW_INCLUDE_NONE
 
 #include <GLFW/glfw3.h>
 
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#	if ENTRY_CONFIG_USE_WAYLAND
+#		include <wayland-egl.h>
+#		define GLFW_EXPOSE_NATIVE_WAYLAND
+#	else
+#		define GLFW_EXPOSE_NATIVE_X11
+#		define GLFW_EXPOSE_NATIVE_GLX
+#	endif
+#elif BX_PLATFORM_OSX
+#	define GLFW_EXPOSE_NATIVE_COCOA
+#	define GLFW_EXPOSE_NATIVE_NSGL
+#elif BX_PLATFORM_WINDOWS
+#	define GLFW_EXPOSE_NATIVE_WIN32
+#	define GLFW_EXPOSE_NATIVE_WGL
+#endif
+
+#include <GLFW/glfw3native.h>
+
+// Shaders (OpenGL)
+#include "util/gl_shaders.h"
+
+// Shaders (BGFX)
+#include <generated/shaders/demo/all.h>
+#include "util/bgfx/c99_embedded_shader.h"
+
+static const bgfx_embedded_shader_t embedded_shaders[] = {
+        BGFX_EMBEDDED_SHADER(vs_basic),
+        BGFX_EMBEDDED_SHADER(fs_basic),
+        BGFX_EMBEDDED_SHADER_END()
+};
+
+// Utilities for BGFX<->GLFW
+
+static void *demo_get_native_window_handle(GLFWwindow *window) {
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#if ENTRY_CONFIG_USE_WAYLAND
+    wl_egl_window *win_impl = (wl_egl_window*)glfwGetWindowUserPointer(window);
+    if(!win_impl)
+    {
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        struct wl_surface* surface = (struct wl_surface*)glfwGetWaylandWindow(window);
+        if(!surface)
+            return nullptr;
+        win_impl = wl_egl_window_create(surface, width, height);
+        glfwSetWindowUserPointer(window, (void*)(uintptr_t)win_impl);
+    }
+    return (void*)(uintptr_t)win_impl;
+#else
+    return (void*)(uintptr_t)glfwGetX11Window(window);
+#endif
+#elif BX_PLATFORM_OSX
+    return glfwGetCocoaWindow(window);
+#elif BX_PLATFORM_WINDOWS
+    return glfwGetWin32Window(window);
+#endif
+}
+
+static void *demo_get_native_display_handle(GLFWwindow *window) {
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#if ENTRY_CONFIG_USE_WAYLAND
+    return glfwGetWaylandDisplay();
+#else
+    return glfwGetX11Display();
+#endif
+#else
+    return NULL;
+#endif
+}
+
+static void *demo_get_native_context(GLFWwindow *window) {
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#if ENTRY_CONFIG_USE_WAYLAND
+    return glfwGetWaylandContext(window);
+#else
+    return glfwGetGLXContext(window);
+#endif
+#elif BX_PLATFORM_OSX
+    return glfwGetNSGLContext(window);
+#elif BX_PLATFORM_WINDOWS
+    return glfwGetWGLContext(window);
+#else
+    return NULL;
+#endif
+}
+
 #include "cglm/mat4.h"
 #include "cglm/cglm.h"
+
+uint16_t uint16_max(uint16_t _a, uint16_t _b) {
+    return _a < _b ? _b : _a;
+}
 
 #include <neopad/lib.h>
 
@@ -17,7 +115,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "common.h"
-#include "shaders.h"
 
 
 // XYZW coordinates for points of a unit quad (drawing as triangles).
@@ -56,31 +153,36 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 }
 
 float zoom = 1;
+
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // If zoom is positive, zoom in. If zoom is negative, zoom out.
     printf("Scroll: %f\n", y_offset);
     // Limit zoom rate.
-    zoom += glm_clamp((float)y_offset, -0.01f, 0.01f);
+    zoom += glm_clamp((float) y_offset, -0.01f, 0.01f);
     // Clamp zoom between 0.1 and 1.
     zoom = glm_clamp(zoom, 0.1f, 1.0f);
 }
 
-int main() {
+GLFWwindow *demo_glfw_setup(int width, int height) {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
         eprintf("Error: unable to initialize GLFW");
         exit(EXIT_FAILURE);
     }
 
+#if DEMO_MODE == DEMO_MODE_OPENGL
     // Require OpenGL 3.3+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // Require a forward-compatible core profile (needed for macOS)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#elif DEMO_MODE == DEMO_MODE_BGFX
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+#endif
 
-    GLFWwindow *window = glfwCreateWindow(1280, 800, "Neopad Demo", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
     if (!window) {
         eprintf("Error: unable to create window");
         glfwTerminate();
@@ -90,7 +192,9 @@ int main() {
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
-    // Obtain a context
+
+#if DEMO_MODE == DEMO_MODE_OPENGL
+    // Obtain a context (OpenGL only)
     glfwMakeContextCurrent(window);
 
     // Print some debug information.
@@ -99,7 +203,90 @@ int main() {
     printf("Renderer: %s\n", glGetString(GL_RENDERER));
     printf("GLSL:     %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
     printf("GLFW:     %s\n", glfwGetVersionString());
+#endif
 
+    return window;;
+}
+
+void demo_glfw_teardown(GLFWwindow *window) {
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void demo_run_bgfx(GLFWwindow *window) {
+    int res = false;
+    int width, height;
+    uint32_t debug = BGFX_DEBUG_TEXT;
+    uint32_t reset = BGFX_RESET_VSYNC;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Prevent render thread creation (avoids a semaphore deadlock in init).
+    bgfx_render_frame(0);
+
+    // Initialize BGFX
+    bgfx_init_t init;
+    bgfx_init_ctor(&init);
+
+    init.resolution.width = width;
+    init.resolution.height = height;
+    init.resolution.reset = reset;
+    init.platformData = (bgfx_platform_data_t) {
+            .nwh = demo_get_native_window_handle(window),
+            .ndt = demo_get_native_display_handle(window)
+    };
+
+    res = bgfx_init(&init);
+    if (!res) {
+        eprintf("Error: unable to initialize BGFX\n");
+        exit(EXIT_FAILURE);
+    } else {
+        printf("IT'S ALIVE!\n");
+    }
+    bgfx_reset(width, height, reset, init.resolution.format);
+
+    // Enable debug text.
+    bgfx_set_debug(debug);
+
+    // Clear screen.
+    bgfx_set_view_clear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x303030ff, 1.0f, 0);
+    bgfx_set_view_rect(0, 0, 0, width, height);
+
+
+
+    while (!glfwWindowShouldClose(window)) {
+        // Poll for events
+        glfwPollEvents();
+
+        // Handle window resize.
+        glfwGetFramebufferSize(window, &width, &height);
+        bgfx_reset(width, height, reset, init.resolution.format);
+        bgfx_set_view_rect_ratio(0, 0, 0, BGFX_BACKBUFFER_RATIO_EQUAL);
+
+        // This dummy draw call is here to make sure that view 0 is cleared
+        // if no other draw calls are submitted to view 0.
+        bgfx_encoder_t* encoder = bgfx_encoder_begin(true);
+        bgfx_encoder_touch(encoder, 0);
+        bgfx_encoder_end(encoder);
+
+        // Use debug font to print information about this example.
+        bgfx_dbg_text_clear(0, false);
+        bgfx_dbg_text_printf(0, 0, 0x1f, __FILE__);
+
+
+
+        // Advance to next frame. Rendering thread will be kicked to
+        // process submitted rendering primitives.
+        bgfx_frame(false);
+
+        // Advance to next frame. Rendering thread will be kicked to
+        // process submitted rendering primitives.
+        bgfx_frame(false);
+    }
+
+    bgfx_shutdown();
+}
+
+void demo_run_opengl(GLFWwindow *window) {
     // VAO: Vertex Array Object
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -219,8 +406,20 @@ int main() {
     glDeleteBuffers(1, &tbo);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
+}
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    exit(EXIT_SUCCESS);
+int main() {
+    int width = 1280;
+    int height = 800;
+
+    GLFWwindow *window = demo_glfw_setup(width, height);
+
+#if DEMO_MODE == DEMO_MODE_OPENGL
+    demo_run_opengl(window);
+#elif DEMO_MODE == DEMO_MODE_BGFX
+    demo_run_bgfx(window);
+#endif
+
+    demo_glfw_teardown(window);
+    return EXIT_SUCCESS;
 }

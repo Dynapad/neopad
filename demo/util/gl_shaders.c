@@ -4,11 +4,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <GLFW/glfw3.h>
-#include <neopad/lib.h>
+#include "GLFW/glfw3.h"
+#include "neopad/lib.h"
 
-#include "shaders.h"
-#include "common.h"
+#include "gl_shaders.h"
+#include "../common.h"
 
 const char *vert_shader_src =
         "#version 330 core                 \n"
