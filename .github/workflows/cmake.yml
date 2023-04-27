@@ -23,6 +23,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt update
+        sudo apt install freeglut3-dev libglu1-mesa-dev mesa-common-dev
         sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev wayland-protocols libwayland-dev libxkbcommon-dev
 
     - name: Configure CMake
