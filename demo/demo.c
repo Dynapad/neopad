@@ -1,20 +1,11 @@
-#define DEMO_MODE_OPENGL 1
-#define DEMO_MODE_BGFX 2
+#include "demo.h"
+#include <neopad/lib.h>
 
-//#define DEMO_MODE DEMO_MODE_OPENGL
-#define DEMO_MODE DEMO_MODE_BGFX
-
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl3.h>
-#endif
-
-#include <bgfx/c99/bgfx.h>
-
+#pragma mark - Includes
 #define GLFW_INCLUDE_NONE
-
 #include <GLFW/glfw3.h>
 
+#include <bx/platform.h>
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
 #	if ENTRY_CONFIG_USE_WAYLAND
 #		include <wayland-egl.h>
@@ -30,13 +21,11 @@
 #	define GLFW_EXPOSE_NATIVE_WIN32
 #	define GLFW_EXPOSE_NATIVE_WGL
 #endif
-
 #include <GLFW/glfw3native.h>
 
-// Shaders (OpenGL)
-#include "util/gl_shaders.h"
+#include <cglm/vec2.h>
 
-// Shaders (BGFX)
+#pragma mark - Shaders
 #include <generated/shaders/demo/all.h>
 #include "util/bgfx/c99_embedded_shader.h"
 
@@ -46,7 +35,23 @@ static const bgfx_embedded_shader_t embedded_shaders[] = {
         BGFX_EMBEDDED_SHADER_END()
 };
 
-// Utilities for BGFX<->GLFW
+#pragma mark - Geometry
+typedef struct demo_xy_rgb_s {
+    vec2 xy;
+    uint32_t rgba;
+} demo_xy_rgb_t;
+
+static const demo_xy_rgb_t demo_vertices[] = {
+        {{-0.5f, -0.5f}, 0x339933FF},
+        {{0.5f, -0.5f}, 0x993333FF},
+        {{0.0f, 0.5f}, 0x333399FF},
+};
+
+static const uint16_t demo_indices[] = {
+        0, 1, 2,
+};
+
+#pragma mark - Native Handles
 
 static void *demo_get_native_window_handle(GLFWwindow *window) {
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
@@ -101,47 +106,7 @@ static void *demo_get_native_context(GLFWwindow *window) {
 #endif
 }
 
-#include "cglm/mat4.h"
-#include "cglm/cglm.h"
-
-uint16_t uint16_max(uint16_t _a, uint16_t _b) {
-    return _a < _b ? _b : _a;
-}
-
-#include <neopad/lib.h>
-
-// May want to use GLAD / see: https://gen.glad.sh
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "common.h"
-
-
-// XYZW coordinates for points of a unit quad (drawing as triangles).
-float quad_coords[] = {-1.0f, 1.0f, 0.0f, 1.0f, // top left
-                       -1.0f, -1.0f, 0.0f, 1.0f, // bottom left
-                       1.0f, -1.0f, 0.0f, 1.0f, // bottom right
-                       1.0f, -1.0f, 0.0f, 1.0f, // bottom right
-                       1.0f, 1.0f, 0.0f, 1.0f,  // top right
-                       -1.0f, 1.0f, 0.0f, 1.0f}; // top left
-
-// RGBA colors for each point of the unit quad.
-// top left: red
-// top right: green
-// bottom right: blue
-// bottom left: white
-float tex_data[] = {1.0f, 0.0f, 0.0f, 0.0f,
-                    0.0f, 1.0f, 0.0f, 0.0f,
-                    0.0f, 0.0f, 1.0f, 0.0f,
-                    1.0f, 1.0f, 1.0f, 1.0f};
-
-float tex_coords[] = {0.0f, 0.0f, // top left -> red
-                      1.0f, 0.0f, // bottom left -> green
-                      0.0f, 1.0f,
-                      0.0f, 1.0f,
-                      1.0f, 1.0f,
-                      0.0f, 0.0f};
-
+#pragma mark - GLFW Callbacks
 void error_callback(int error, const char *description) {
     eprintf("GLFW Error: %s\n", description);
 }
@@ -152,8 +117,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
 }
 
-float zoom = 1;
-
+static float zoom = 1;
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // If zoom is positive, zoom in. If zoom is negative, zoom out.
     printf("Scroll: %f\n", y_offset);
@@ -163,24 +127,15 @@ void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     zoom = glm_clamp(zoom, 0.1f, 1.0f);
 }
 
-GLFWwindow *demo_glfw_setup(int width, int height) {
+#pragma mark - Setup / Teardown
+GLFWwindow *setup(int width, int height) {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
         eprintf("Error: unable to initialize GLFW");
         exit(EXIT_FAILURE);
     }
 
-#if DEMO_MODE == DEMO_MODE_OPENGL
-    // Require OpenGL 3.3+
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-
-    // Require a forward-compatible core profile (needed for macOS)
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#elif DEMO_MODE == DEMO_MODE_BGFX
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-#endif
 
     GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
     if (!window) {
@@ -192,33 +147,20 @@ GLFWwindow *demo_glfw_setup(int width, int height) {
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
-
-#if DEMO_MODE == DEMO_MODE_OPENGL
-    // Obtain a context (OpenGL only)
-    glfwMakeContextCurrent(window);
-
-    // Print some debug information.
-    printf("OpenGL:   %s\n", glGetString(GL_VERSION));
-    printf("Vendor:   %s\n", glGetString(GL_VENDOR));
-    printf("Renderer: %s\n", glGetString(GL_RENDERER));
-    printf("GLSL:     %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-    printf("GLFW:     %s\n", glfwGetVersionString());
-#endif
-
     return window;;
 }
 
-void demo_glfw_teardown(GLFWwindow *window) {
+void teardown(GLFWwindow *window) {
     glfwDestroyWindow(window);
     glfwTerminate();
 }
 
-void demo_run_bgfx(GLFWwindow *window) {
+void run(GLFWwindow *window) {
     int res = false;
     int width, height;
     uint32_t debug = BGFX_DEBUG_TEXT;
     uint32_t reset = BGFX_RESET_VSYNC;
-    glfwGetWindowSize(window, &width, &height);
+    glfwGetFramebufferSize(window, &width, &height);
 
     // Prevent render thread creation (avoids a semaphore deadlock in init).
     bgfx_render_frame(0);
@@ -239,19 +181,41 @@ void demo_run_bgfx(GLFWwindow *window) {
     if (!res) {
         eprintf("Error: unable to initialize BGFX\n");
         exit(EXIT_FAILURE);
-    } else {
-        printf("IT'S ALIVE!\n");
     }
+
+    bgfx_view_id_t view_id = 0;
+
     bgfx_reset(width, height, reset, init.resolution.format);
 
     // Enable debug text.
     bgfx_set_debug(debug);
 
     // Clear screen.
-    bgfx_set_view_clear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x303030ff, 1.0f, 0);
-    bgfx_set_view_rect(0, 0, 0, width, height);
+    bgfx_set_view_clear(view_id, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x303030ff, 1.0f, 0);
+    bgfx_set_view_rect(view_id, 0, 0, width, height);
 
+    // Vertex layout.
+    bgfx_vertex_layout_t vertex_layout;
+    bgfx_vertex_layout_begin(&vertex_layout, BGFX_RENDERER_TYPE_NOOP);
+    bgfx_vertex_layout_add(&vertex_layout, BGFX_ATTRIB_POSITION, 2, BGFX_ATTRIB_TYPE_FLOAT, false, false);
+    bgfx_vertex_layout_add(&vertex_layout, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8, true, false);
+    bgfx_vertex_layout_end(&vertex_layout);
 
+    // Create vertex buffer.
+    bgfx_vertex_buffer_handle_t vertex_buffer_handle = bgfx_create_vertex_buffer(
+            bgfx_make_ref(demo_vertices, sizeof(demo_vertices)), &vertex_layout, BGFX_BUFFER_NONE
+    );
+    bgfx_index_buffer_handle_t index_buffer_handle = bgfx_create_index_buffer(
+            bgfx_make_ref(demo_indices, sizeof(demo_indices)), BGFX_BUFFER_NONE
+    );
+
+    // Compile shaders
+    bgfx_renderer_type_t renderer_type = bgfx_get_renderer_type();
+    bgfx_program_handle_t program = bgfx_create_program(
+            bgfx_create_embedded_shader(embedded_shaders, renderer_type, "vs_basic"),
+            bgfx_create_embedded_shader(embedded_shaders, renderer_type, "fs_basic"),
+            true
+    );
 
     while (!glfwWindowShouldClose(window)) {
         // Poll for events
@@ -260,23 +224,24 @@ void demo_run_bgfx(GLFWwindow *window) {
         // Handle window resize.
         glfwGetFramebufferSize(window, &width, &height);
         bgfx_reset(width, height, reset, init.resolution.format);
-        bgfx_set_view_rect_ratio(0, 0, 0, BGFX_BACKBUFFER_RATIO_EQUAL);
+        bgfx_set_view_rect_ratio(view_id, 0, 0, BGFX_BACKBUFFER_RATIO_EQUAL);
 
         // This dummy draw call is here to make sure that view 0 is cleared
         // if no other draw calls are submitted to view 0.
         bgfx_encoder_t* encoder = bgfx_encoder_begin(true);
-        bgfx_encoder_touch(encoder, 0);
+        bgfx_encoder_touch(encoder, view_id);
         bgfx_encoder_end(encoder);
 
         // Use debug font to print information about this example.
         bgfx_dbg_text_clear(0, false);
         bgfx_dbg_text_printf(0, 0, 0x1f, __FILE__);
 
+        // We just want to write RGB, default includes alpha, depth, depth testing, culling, etc.
+        bgfx_set_state(BGFX_STATE_WRITE_RGB, 0);
 
-
-        // Advance to next frame. Rendering thread will be kicked to
-        // process submitted rendering primitives.
-        bgfx_frame(false);
+        bgfx_set_vertex_buffer(0, vertex_buffer_handle, 0, 3);
+        bgfx_set_index_buffer(index_buffer_handle, 0, 3);
+        bgfx_submit(0, program, 0, false);
 
         // Advance to next frame. Rendering thread will be kicked to
         // process submitted rendering primitives.
@@ -286,140 +251,14 @@ void demo_run_bgfx(GLFWwindow *window) {
     bgfx_shutdown();
 }
 
-void demo_run_opengl(GLFWwindow *window) {
-    // VAO: Vertex Array Object
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    // VBO: Vertex Buffer Object
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(
-            GL_ARRAY_BUFFER,
-            sizeof(quad_coords),
-            &quad_coords[0],
-            GL_STATIC_DRAW
-    );
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // TBO: Texture Buffer Object
-    GLuint tbo;
-    glGenBuffers(1, &tbo);
-    glBindBuffer(GL_ARRAY_BUFFER, tbo);
-    glBufferData(
-            GL_ARRAY_BUFFER,
-            sizeof(tex_coords),
-            &tex_coords[0],
-            GL_STATIC_DRAW
-    );
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // Create a texture, and set texture parameters (not strictly necessary)
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    // Load the texture data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_FLOAT, tex_data);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Compile and use the shader program.
-    GLuint program = create_shader_program(vert_shader_src, frag_shader_src);
-    glUseProgram(program);
-
-    // Extract IDs of shader variables.
-    GLint mvp_loc = glGetUniformLocation(program, "mvp");
-    assert(mvp_loc >= 0);
-    if (mvp_loc < 0) {
-        eprintf("Error: unable to find mvp uniform\n");
-        eprintf("OpenGL Error: %x\n", glGetError());
-        exit(EXIT_FAILURE);
-    }
-
-    GLint tex_loc = glGetUniformLocation(program, "tex");
-    if (tex_loc < 0) {
-        eprintf("Error: unable to find texture uniform\n");
-        eprintf("OpenGL Error: %x\n", glGetError());
-        exit(EXIT_FAILURE);
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(tex_loc, 0);
-
-    // Set a background color (dark blue)
-    glClearColor(0.0f, 0.0f, 0.4f, 1.0f);
-
-    // Run!
-    while (!glfwWindowShouldClose(window)) {
-        // Update the viewport
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        glViewport(0, 0, width, height);
-
-        // Update the projection matrix
-        float aspect = (float) width / (float) height;
-
-        // Update the model-view-projection matrix, applying the zoom level.
-
-        mat4 proj_mat, model_view_mat, mvp_mat;
-        glm_ortho_default(aspect, proj_mat);
-        glm_mat4_identity(model_view_mat);
-        glm_scale(model_view_mat, (vec3) {zoom, zoom, 1.0f});
-        glm_mat4_mul(proj_mat, model_view_mat, mvp_mat);
-        glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, (GLfloat *) mvp_mat);
-
-        // Clear the screen
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Select geometry
-        glBindVertexArray(vao);
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-
-        // Draw the geometry
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // Unbind
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(0);
-        glBindVertexArray(0);
-
-        // Swap buffers
-        glfwSwapBuffers(window);
-
-        // Poll for events
-        glfwPollEvents();
-    }
-
-    // Cleanup
-    glDeleteTextures(1, &texture);
-    glDeleteBuffers(1, &tbo);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
-}
-
 int main() {
     int width = 1280;
     int height = 800;
 
-    GLFWwindow *window = demo_glfw_setup(width, height);
+    GLFWwindow *window = setup(width, height);
 
-#if DEMO_MODE == DEMO_MODE_OPENGL
-    demo_run_opengl(window);
-#elif DEMO_MODE == DEMO_MODE_BGFX
-    demo_run_bgfx(window);
-#endif
+    run(window);
 
-    demo_glfw_teardown(window);
+    teardown(window);
     return EXIT_SUCCESS;
 }

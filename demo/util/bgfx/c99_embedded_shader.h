@@ -5,8 +5,8 @@
  *   - License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#ifndef BGFX_EMBEDDED_SHADER_H_HEADER_GUARD
-#define BGFX_EMBEDDED_SHADER_H_HEADER_GUARD
+#ifndef BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
+#define BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
 
 #include <bx/platform.h>
 #include <bgfx/c99/bgfx.h>
@@ -18,12 +18,7 @@
 #endif // BX_CONCATENATE
 
 #ifndef BX_COUNTOF
-#define ARRAY_ONLY(arr) _Static_assert(_Generic((arr),        \
-                            default:                          \
-                              sizeof(arr) == sizeof(arr[0]) * \
-                              (sizeof(arr)/sizeof(arr[0])))   \
-                          , "Macro only accepts array types");
-#define BX_COUNTOF(x) ({ARRAY_ONLY(x), (sizeof(x) / sizeof(*(x))) - 1})
+#define BX_COUNTOF(x) ((sizeof(x) / sizeof(*(x))) - 1)
 #endif
 
 #include <bgfx/c99/bgfx.h>
@@ -175,4 +170,4 @@ bgfx_shader_handle_t bgfx_create_embedded_shader(
         const char *_name
 );
 
-#endif // BGFX_EMBEDDED_SHADER_H_HEADER_GUARD
+#endif // BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
