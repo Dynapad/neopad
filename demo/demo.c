@@ -136,6 +136,7 @@ GLFWwindow *setup(int width, int height) {
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
 
     GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
     if (!window) {
@@ -158,7 +159,7 @@ void teardown(GLFWwindow *window) {
 void run(GLFWwindow *window) {
     int res = false;
     int width, height;
-    uint32_t debug = BGFX_DEBUG_TEXT;
+    uint32_t debug = BGFX_DEBUG_STATS;
     uint32_t reset = BGFX_RESET_VSYNC;
     glfwGetFramebufferSize(window, &width, &height);
 
