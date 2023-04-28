@@ -43,7 +43,18 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      # Enable core dumps for debugging purposes.
+      run: |
+        ulimit -c unlimited -S
+        ulimit -c unlimited        
+        sudo cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        sudo chmod -R +rwx /cores/*
+
+    - name: Capture Crashes
+      uses: actions/upload-artifact@master
+      with:
+        name: crashes
+        path: /cores
 
     - name: Test
       working-directory: ${{github.workspace}}/build
