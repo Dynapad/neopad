@@ -2,7 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "ci" ]
   pull_request:
     branches: [ "main" ]
 
@@ -27,7 +27,7 @@ jobs:
         sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libxkbcommon-dev
         sudo apt install wayland-protocols libwayland-dev
 
-    - name: Cache CMake Dependencies
+    - name: Cache Dependencies
       # Restore cached dependencies (contents of build/_deps) if possible.
       uses: actions/cache@v3
       with:
@@ -46,7 +46,7 @@ jobs:
       # Enable core dumps for debugging purposes.
       run: |
         ulimit -c unlimited -S
-        ulimit -c unlimited        
+        ulimit -c unlimited        ./
         sudo cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         sudo chmod -R +rwx /cores/*
 
