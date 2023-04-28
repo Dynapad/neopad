@@ -2,7 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [ "ci" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -20,11 +20,21 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install Dependencies
+    - name: Install Packages
       run: |
         sudo apt update
         sudo apt install freeglut3-dev libglu1-mesa-dev mesa-common-dev
-        sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev wayland-protocols libwayland-dev libxkbcommon-dev
+        sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libxkbcommon-dev
+        sudo apt install wayland-protocols libwayland-dev
+
+    - name: Cache CMake Dependencies
+      # Restore cached dependencies (contents of build/_deps) if possible.
+      uses: actions/cache@v3
+      with:
+        path: build/_deps
+        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-cmake-
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
