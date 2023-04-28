@@ -170,6 +170,11 @@ void run(GLFWwindow *window) {
     bgfx_init_t init;
     bgfx_init_ctor(&init);
 
+    if (BX_PLATFORM_WINDOWS) {
+        // Direct3D 11 has some weird bug in bgfx::init, will figure it out later.
+        // For now, D3D9 is more than enough.
+        init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
+    }
     init.resolution.width = width;
     init.resolution.height = height;
     init.resolution.reset = reset;
