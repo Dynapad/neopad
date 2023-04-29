@@ -121,6 +121,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     draw(window);
 }
 
+void window_content_scale_callback(GLFWwindow* window, float xscale, float yscale)
+{
+    if (renderer == NULL) return;
+    printf("Content scale: %f, %f\n", xscale, yscale);
+    neopad_renderer_rescale(renderer, xscale);
+    draw(window);
+}
+
 #pragma mark - Setup / Teardown
 
 GLFWwindow *setup(int width, int height) {
@@ -143,6 +151,7 @@ GLFWwindow *setup(int width, int height) {
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetWindowContentScaleCallback(window, window_content_scale_callback);
 
     return window;;
 }
@@ -154,7 +163,6 @@ void teardown(GLFWwindow *window) {
 
 void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
-    neopad_renderer_clear(renderer, 0x202020FF);
     neopad_renderer_test_rect(renderer);
     neopad_renderer_end_frame(renderer);
 }
@@ -162,15 +170,22 @@ void draw(GLFWwindow *window) {
 void run(GLFWwindow *window) {
     int res = false;
     int width, height;
+    float scale = 1.0f;
+
     glfwGetFramebufferSize(window, &width, &height);
+    glfwGetWindowContentScale(window, &scale, NULL);
 
     renderer = neopad_renderer_create();
     neopad_renderer_init(renderer, (neopad_renderer_init_t) {
         .width = width,
         .height = height,
+        .content_scale = scale,
         .debug = true,
         .native_window_handle = demo_get_native_window_handle(window),
         .native_display_type = demo_get_native_display_type(window),
+        .background = (neopad_renderer_background_t) {
+            .color = 0x333333FF,
+        },
     });
 
     while (!glfwWindowShouldClose(window)) {

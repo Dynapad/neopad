@@ -5,15 +5,18 @@
 #include "util/log.h"
 #include "util/bgfx/embedded_shader.h"
 #include "generated/shaders/src/all.h"
+#include "cglm/affine.h"
 
 #include <cglm/vec3.h>
 #include <cglm/cam.h>
 
 #include <memory.h>
 
-
 #define PROGRAM_BASIC 0
 #define PROGRAM_COUNT 1
+
+#define VIEW_BACKGROUND 0
+#define VIEW_CONTENT 1
 
 struct neopad_renderer_s {
     /// BGFX initialization parameters.
@@ -23,9 +26,15 @@ struct neopad_renderer_s {
     uint32_t width;
     uint32_t height;
 
-    /// Intended resolution post-resize.
+    /// Intended back-buffer resolution post-resize.
     uint32_t target_width;
     uint32_t target_height;
+
+    /// Draw scale. This is used to scale the UI on high-DPI displays.
+    float scale;
+
+    /// Background settings.
+    neopad_renderer_background_t background;
 
     /// Vertex layout(s).
     bgfx_vertex_layout_t vertex_layout;
@@ -33,6 +42,7 @@ struct neopad_renderer_s {
     /// Programs (shader pipelines)
     bgfx_program_handle_t programs[PROGRAM_COUNT];
 
+    // TODO: remove
     bgfx_dynamic_vertex_buffer_handle_t vertex_buffer;
     bgfx_dynamic_index_buffer_handle_t index_buffer;
 };
@@ -45,10 +55,10 @@ typedef struct neopad_vertex_s {
     uint32_t rgba;
 } neopad_vertex_t;
 
-const float TEST_L = 100.0f;
-const float TEST_R = 1180.0f;
-const float TEST_T = 700.0f;
-const float TEST_B = 100.0f;
+const float TEST_L = -100.0f;
+const float TEST_R = 100.0f;
+const float TEST_T = 100.0f;
+const float TEST_B = -100.0f;
 
 const neopad_vertex_t TEST_VERTICES[] = {
         {TEST_L, TEST_B, 0.0f, 0xff0000ff},
@@ -82,6 +92,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     this->height = init.height;
     this->target_width = init.width;
     this->target_height = init.height;
+    this->scale = init.content_scale ? init.content_scale : 1.0f;
+    this->background = init.background;
 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
@@ -142,6 +154,10 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
     this->target_height = height;
 }
 
+void neopad_renderer_rescale(neopad_renderer_t this, float scale) {
+    this->scale = scale;
+}
+
 void neopad_renderer_destroy(neopad_renderer_t this) {
     bgfx_shutdown();
     free(this);
@@ -156,34 +172,47 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
     }
 
-    // For now, just one pass. Portals may change that.
-    bgfx_set_view_clear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
-    bgfx_set_view_rect(0, 0, 0, this->width, this->height);
+}
 
-    bgfx_encoder_t *encoder = bgfx_encoder_begin(true);
-    bgfx_encoder_touch(encoder, 0);
-    bgfx_encoder_end(encoder);
+void neopad_renderer_end_frame(neopad_renderer_t this) {
+    // BACKGROUND
+    // ----------
 
-    // Set channels to write to.
+    bgfx_set_view_clear(VIEW_BACKGROUND, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
+    bgfx_set_view_rect(VIEW_BACKGROUND, 0, 0, this->width, this->height);
+    bgfx_touch(VIEW_BACKGROUND);
     bgfx_set_state(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A, 0);
+    bgfx_submit(VIEW_BACKGROUND, this->programs[PROGRAM_BASIC], 0, false);
+
+
+    // CONTENT
+    // -------
 
     // Set view transform.
     mat4 view;
     mat4 proj;
 
-    glm_mat4_identity(view);
-    glm_ortho(0.0f, (float)this->width, 0.0f, (float)this->height, -1.0f, 1.0f, proj);
-    bgfx_set_view_transform(0, view, proj);
-}
+    float scaled_width = (float) this->width / this->scale;
+    float scaled_height = (float) this->height / this->scale;
 
-void neopad_renderer_end_frame(neopad_renderer_t this) {
+    glm_translate_make(view, (vec3) {scaled_width / 2.0f,scaled_height / 2.0f,0.0f});
+    glm_ortho(0.0f, scaled_width,0.0f, scaled_height,-1.0f, 1.0f, proj);
+    bgfx_set_view_transform(VIEW_CONTENT, view, proj);
+    bgfx_set_view_clear(VIEW_CONTENT, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
+    bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
+    bgfx_touch(VIEW_CONTENT);
+
     bgfx_frame(false);
 }
 
 #pragma mark - Drawing
 
-void neopad_renderer_clear(neopad_renderer_t this, uint32_t color) {
-    bgfx_set_view_clear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, color, 1.0f, 0);
+void neopad_renderer_draw_axes(neopad_renderer_t this) {
+
+}
+
+void neopad_renderer_draw_grid(neopad_renderer_t this, float major) {
+
 }
 
 #pragma mark - Testing
@@ -191,7 +220,8 @@ void neopad_renderer_clear(neopad_renderer_t this, uint32_t color) {
 void neopad_renderer_test_rect(neopad_renderer_t this) {
     bgfx_set_dynamic_vertex_buffer(0, this->vertex_buffer, 0, 4);
     bgfx_set_dynamic_index_buffer(this->index_buffer, 0, 6);
-    bgfx_submit(0, this->programs[PROGRAM_BASIC], 0, false);
+    bgfx_set_state(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A, 0);
+    bgfx_submit(VIEW_CONTENT, this->programs[PROGRAM_BASIC], 0, false);
 }
 
 
