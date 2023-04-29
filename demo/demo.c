@@ -176,11 +176,6 @@ void run(GLFWwindow *window) {
     while (!glfwWindowShouldClose(window)) {
         // Poll for events and check if the window resized.
         glfwPollEvents();
-
-        // Handle window resize.
-        glfwGetFramebufferSize(window, &width, &height);
-        neopad_renderer_resize(renderer, width, height);
-
         draw(window);
     }
 

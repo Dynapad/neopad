@@ -77,6 +77,12 @@ neopad_renderer_t neopad_renderer_create() {
 }
 
 void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
+    // Populate ourselves
+    this->width = init.width;
+    this->height = init.height;
+    this->target_width = init.width;
+    this->target_height = init.height;
+
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
     bgfx_render_frame(0);
