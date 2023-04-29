@@ -1,4 +1,4 @@
-#include <neopad/lib.h>
+#include <neopad/neopad.h>
 
 #include <stdarg.h>
 #include <stddef.h>

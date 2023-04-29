@@ -168,4 +168,13 @@ bgfx_shader_handle_t bgfx_create_embedded_shader(
         const char *_name
 );
 
+/// Create program from embedded shader data.
+bgfx_program_handle_t bgfx_create_embedded_program(
+        const bgfx_embedded_shader_t *_es,
+        enum bgfx_renderer_type _type,
+        const char *_vsName,
+        const char *_fsName,
+        bool _destroyShaders
+);
+
 #endif // BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD

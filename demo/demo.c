@@ -1,5 +1,9 @@
-#include "demo.h"
-#include <neopad/lib.h>
+#include <neopad/renderer.h>
+#include <neopad/neopad.h>
+
+#include <stdio.h>
+
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 #pragma mark - Includes
 #define GLFW_INCLUDE_NONE
@@ -24,32 +28,6 @@
 #include <GLFW/glfw3native.h>
 
 #include <cglm/vec2.h>
-
-#pragma mark - Shaders
-#include <generated/shaders/demo/all.h>
-#include "util/bgfx/c99_embedded_shader.h"
-
-static const bgfx_embedded_shader_t embedded_shaders[] = {
-        BGFX_EMBEDDED_SHADER(vs_basic),
-        BGFX_EMBEDDED_SHADER(fs_basic),
-        BGFX_EMBEDDED_SHADER_END()
-};
-
-#pragma mark - Geometry
-typedef struct demo_xy_rgb_s {
-    vec2 xy;
-    uint32_t rgba;
-} demo_xy_rgb_t;
-
-static const demo_xy_rgb_t demo_vertices[] = {
-        {{-0.5f, -0.5f}, 0x339933FF},
-        {{0.5f, -0.5f}, 0x993333FF},
-        {{0.0f, 0.5f}, 0x333399FF},
-};
-
-static const uint16_t demo_indices[] = {
-        0, 1, 2,
-};
 
 #pragma mark - Native Handles
 
@@ -78,7 +56,7 @@ static void *demo_get_native_window_handle(GLFWwindow *window) {
 #endif
 }
 
-static void *demo_get_native_display_handle(GLFWwindow *window) {
+static void *demo_get_native_display_type(GLFWwindow *window) {
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
 #if ENTRY_CONFIG_USE_WAYLAND
     return glfwGetWaylandDisplay();
@@ -106,7 +84,16 @@ static void *demo_get_native_context(GLFWwindow *window) {
 #endif
 }
 
+#pragma mark - Forward Declarations
+
+void draw(GLFWwindow *window);
+
+#pragma mark - Globals
+
+static neopad_renderer_t renderer = NULL;
+
 #pragma mark - GLFW Callbacks
+
 void error_callback(int error, const char *description) {
     eprintf("GLFW Error: %s\n", description);
 }
@@ -123,11 +110,19 @@ void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     printf("Scroll: %f\n", y_offset);
     // Limit zoom rate.
     zoom += glm_clamp((float) y_offset, -0.01f, 0.01f);
-    // Clamp zoom between 0.1 and 1.
+    // Clamp zoom betsween 0.1 and 1.
     zoom = glm_clamp(zoom, 0.1f, 1.0f);
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    if (renderer == NULL) return;
+    neopad_renderer_resize(renderer, width, height);
+    draw(window);
+}
+
 #pragma mark - Setup / Teardown
+
 GLFWwindow *setup(int width, int height) {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
@@ -147,6 +142,7 @@ GLFWwindow *setup(int width, int height) {
 
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     return window;;
 }
@@ -156,105 +152,39 @@ void teardown(GLFWwindow *window) {
     glfwTerminate();
 }
 
+void draw(GLFWwindow *window) {
+    neopad_renderer_begin_frame(renderer);
+    neopad_renderer_clear(renderer, 0x202020FF);
+    neopad_renderer_test_rect(renderer);
+    neopad_renderer_end_frame(renderer);
+}
+
 void run(GLFWwindow *window) {
     int res = false;
     int width, height;
-    uint32_t debug = BGFX_DEBUG_STATS;
-    uint32_t reset = BGFX_RESET_VSYNC;
     glfwGetFramebufferSize(window, &width, &height);
 
-    // Prevent render thread creation (avoids a semaphore deadlock in init).
-    bgfx_render_frame(0);
-
-    // Initialize BGFX
-    bgfx_init_t init;
-    bgfx_init_ctor(&init);
-
-    if (BX_PLATFORM_WINDOWS) {
-        // Direct3D 11 has some weird bug in bgfx::init, will figure it out later.
-        // For now, D3D9 is more than enough.
-        init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
-    }
-    init.resolution.width = width;
-    init.resolution.height = height;
-    init.resolution.reset = reset;
-    init.platformData = (bgfx_platform_data_t) {
-            .nwh = demo_get_native_window_handle(window),
-            .ndt = demo_get_native_display_handle(window)
-    };
-
-    res = bgfx_init(&init);
-    if (!res) {
-        eprintf("Error: unable to initialize BGFX\n");
-        exit(EXIT_FAILURE);
-    }
-
-    bgfx_view_id_t view_id = 0;
-
-    bgfx_reset(width, height, reset, init.resolution.format);
-
-    // Enable debug text.
-    bgfx_set_debug(debug);
-
-    // Clear screen.
-    bgfx_set_view_clear(view_id, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x303030ff, 1.0f, 0);
-    bgfx_set_view_rect(view_id, 0, 0, width, height);
-
-    // Vertex layout.
-    bgfx_vertex_layout_t vertex_layout;
-    bgfx_vertex_layout_begin(&vertex_layout, BGFX_RENDERER_TYPE_NOOP);
-    bgfx_vertex_layout_add(&vertex_layout, BGFX_ATTRIB_POSITION, 2, BGFX_ATTRIB_TYPE_FLOAT, false, false);
-    bgfx_vertex_layout_add(&vertex_layout, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8, true, false);
-    bgfx_vertex_layout_end(&vertex_layout);
-
-    // Create vertex buffer.
-    bgfx_vertex_buffer_handle_t vertex_buffer_handle = bgfx_create_vertex_buffer(
-            bgfx_make_ref(demo_vertices, sizeof(demo_vertices)), &vertex_layout, BGFX_BUFFER_NONE
-    );
-    bgfx_index_buffer_handle_t index_buffer_handle = bgfx_create_index_buffer(
-            bgfx_make_ref(demo_indices, sizeof(demo_indices)), BGFX_BUFFER_NONE
-    );
-
-    // Compile shaders
-    bgfx_renderer_type_t renderer_type = bgfx_get_renderer_type();
-    bgfx_program_handle_t program = bgfx_create_program(
-            bgfx_create_embedded_shader(embedded_shaders, renderer_type, "vs_basic"),
-            bgfx_create_embedded_shader(embedded_shaders, renderer_type, "fs_basic"),
-            true
-    );
+    renderer = neopad_renderer_create();
+    neopad_renderer_init(renderer, (neopad_renderer_init_t) {
+        .width = width,
+        .height = height,
+        .debug = true,
+        .native_window_handle = demo_get_native_window_handle(window),
+        .native_display_type = demo_get_native_display_type(window),
+    });
 
     while (!glfwWindowShouldClose(window)) {
-        // Poll for events
+        // Poll for events and check if the window resized.
         glfwPollEvents();
 
         // Handle window resize.
         glfwGetFramebufferSize(window, &width, &height);
-        bgfx_reset(width, height, reset, init.resolution.format);
-        bgfx_set_view_rect_ratio(view_id, 0, 0, BGFX_BACKBUFFER_RATIO_EQUAL);
+        neopad_renderer_resize(renderer, width, height);
 
-        // This dummy draw call is here to make sure that view 0 is cleared
-        // if no other draw calls are submitted to view 0.
-        bgfx_encoder_t* encoder = bgfx_encoder_begin(true);
-        bgfx_encoder_touch(encoder, view_id);
-        bgfx_encoder_end(encoder);
-
-        // Use debug font to print information about this example.
-        bgfx_dbg_text_clear(0, false);
-        bgfx_dbg_text_printf(0, 0, 0x1f, __FILE__);
-
-        // We just want to write RGB, default includes alpha, depth, depth testing, culling, etc.
-        bgfx_set_state(BGFX_STATE_WRITE_RGB, 0);
-
-        bgfx_set_vertex_buffer(0, vertex_buffer_handle, 0, 3);
-        bgfx_set_index_buffer(index_buffer_handle, 0, 3);
-        bgfx_submit(0, program, 0, false);
-
-        // Advance to next frame. Rendering thread will be kicked to
-        // process submitted rendering primitives.
-        bgfx_frame(false);
+        draw(window);
     }
 
-    bgfx_shutdown();
+    neopad_renderer_destroy(renderer);
 }
 
 int main() {
