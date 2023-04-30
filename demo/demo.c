@@ -163,7 +163,9 @@ void teardown(GLFWwindow *window) {
 
 void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
-    neopad_renderer_test_rect(renderer);
+    neopad_renderer_draw_background(renderer);
+    neopad_renderer_draw_test_rect(renderer, -200, -100, -100, -200);
+//    neopad_renderer_draw_test_rect(renderer, -100, 100, 100, -100);
     neopad_renderer_end_frame(renderer);
 }
 
@@ -184,7 +186,10 @@ void run(GLFWwindow *window) {
         .native_window_handle = demo_get_native_window_handle(window),
         .native_display_type = demo_get_native_display_type(window),
         .background = (neopad_renderer_background_t) {
-            .color = 0x333333FF,
+            .color = 0x202020FF,
+            .grid_color = 0x404040FF,
+            .grid_major = 100,
+            .grid_minor = 10,
         },
     });
 

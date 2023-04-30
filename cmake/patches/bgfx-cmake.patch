@@ -1,5 +1,5 @@
 diff --git a/cmake/bgfxToolUtils.cmake b/cmake/bgfxToolUtils.cmake
-index 22a1c67..cd45a67 100644
+index 22a1c67..14fe25f 100644
 --- a/cmake/bgfxToolUtils.cmake
 +++ b/cmake/bgfxToolUtils.cmake
 @@ -535,12 +535,14 @@ endfunction()
@@ -19,7 +19,7 @@ index 22a1c67..cd45a67 100644
  	cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
  
  	set(PROFILES 120 300_es spirv) # pssl
-@@ -596,12 +598,15 @@ function(bgfx_compile_shader_to_header)
+@@ -596,12 +598,16 @@ function(bgfx_compile_shader_to_header)
  				PROFILE ${PROFILE}
  				O "$<$<CONFIG:debug>:0>$<$<CONFIG:release>:3>$<$<CONFIG:relwithdebinfo>:3>$<$<CONFIG:minsizerel>:3>"
  				VARYINGDEF ${ARGS_VARYING_DEF}
@@ -32,7 +32,8 @@ index 22a1c67..cd45a67 100644
 +			list(APPEND COMMANDS COMMAND $<TARGET_FILE:shaderc> ${CLI})
  		endforeach()
 +		if(DEFINED ARGS_OUT_FILES_VAR)
-+			set(${ARGS_OUT_FILES_VAR} ${OUTPUTS} PARENT_SCOPE)
++			list(APPEND ${ARGS_OUT_FILES_VAR} ${OUTPUTS})
++			set(${ARGS_OUT_FILES_VAR} ${${ARGS_OUT_FILES_VAR}} PARENT_SCOPE)
 +		endif()
  
  		add_custom_command(

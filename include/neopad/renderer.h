@@ -84,15 +84,8 @@ void neopad_renderer_end_frame(neopad_renderer_t this);
 
 #pragma mark - Drawing
 
-/// Draw the axes through the origin.
-/// \note red is X, green is Y (blue would be Z).
-void neopad_renderer_draw_axes(neopad_renderer_t this);
-
-/// Set a grid to be drawn, centered at the origin.
-/// \param this The renderer.
-void neopad_renderer_draw_grid(neopad_renderer_t this, float major);
-
-void neopad_renderer_test_rect(neopad_renderer_t this);
+void neopad_renderer_draw_background(neopad_renderer_t this);
+void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, float r, float b);
 
 #pragma mark - Line Drawing
 

@@ -12,7 +12,7 @@ file(GLOB_RECURSE NEOPAD_HEADERS CONFIGURE_DEPENDS "${neopad_SOURCE_DIR}/include
 add_library(neopad ${NEOPAD_SOURCES} ${NEOPAD_HEADERS})
 
 # Compile shaders into headers for embedding, output to "build/src/include/generated/...".
-add_shaders_directory(shaders SHADERS_TARGET_NAME)
+add_shaders_directory("${CMAKE_CURRENT_SOURCE_DIR}/shaders" SHADERS_TARGET_NAME)
 
 # We need this directory, and users of our library will need it too.
 target_include_directories(neopad PUBLIC ../include)

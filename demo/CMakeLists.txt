@@ -5,9 +5,6 @@ include(${PROJECT_SOURCE_DIR}/cmake/bgfx.cmake)
 # Find source files automatically
 file(GLOB_RECURSE NEOPAD_DEMO_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR} *.c)
 
-# Shaders
-add_shaders_directory(shaders SHADERS_TARGET_NAME)
-
 add_executable(neopad_demo ${NEOPAD_DEMO_SOURCES})
 set_property(TARGET neopad_demo PROPERTY OUTPUT_NAME neopad)
 
