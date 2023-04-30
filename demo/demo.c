@@ -108,16 +108,22 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 }
 
 static bool mouse_down = false;
-static double drag_start_x = 0;
-static double drag_start_y = 0;
-static double drag_delta_x = 0;
-static double drag_delta_y = 0;
+
+// These are in world coordinates, so that camera offset can be computed properly.
+static vec2 drag_from = {0, 0};
+static vec2 drag_to = {0, 0};
+
+// Zoom is also used to control drag velocity.
+static float zoom = 1;
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             mouse_down = true;
-            glfwGetCursorPos(window, &drag_start_x, &drag_start_y);
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
+            drag_from[0] = (float)x, drag_from[1] = (float)y;
+            neopad_renderer_glfw2world(renderer, drag_from, drag_from);
         } else if (action == GLFW_RELEASE) {
             mouse_down = false;
         }
@@ -126,17 +132,24 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 
 void cursor_position_callback(GLFWwindow *window, double x, double y) {
     if (mouse_down) {
-        drag_delta_x = (x - drag_start_x);
-        drag_delta_y = -(y - drag_start_y);
+        drag_to[0] = (float)x, drag_to[1] = (float)y;
+        neopad_renderer_glfw2world(renderer, drag_to, drag_to);
+        vec2 drag_delta = {0, 0};
+        glm_vec2_sub(drag_to, drag_from, drag_delta);
+        glm_vec2_scale(drag_delta, zoom, drag_delta);
 
-        neopad_renderer_set_position(renderer, (float) drag_delta_x, (float) drag_delta_y);
+//        eprintf("Drag from (world): %f, %f\n", drag_from[0], drag_from[1]);
+//        eprintf("Drag to (world): %f, %f\n", drag_to[0], drag_to[1]);
+//        eprintf("Drag delta: %f, %f\n\n", drag_delta[0], drag_delta[1]);
+
+        float camera_x, camera_y;
+        neopad_renderer_get_camera(renderer, &camera_x, &camera_y);
+        neopad_renderer_set_camera(renderer, camera_x + drag_delta[0], camera_y + drag_delta[1]);
     }
 }
 
-static float zoom = 1;
-
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
-    // If zoom is positive, zoom in. If zoom is negative, zoom out.
+//    eprintf("Scroll: %f, %f\n", x_offset, y_offset);
 
     // Limit zoom rate.
     zoom += glm_clamp((float) y_offset, -0.02f, 0.02f);
@@ -154,7 +167,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 
 void window_content_scale_callback(GLFWwindow *window, float xscale, float yscale) {
     if (renderer == NULL) return;
-    printf("Content scale: %f, %f\n", xscale, yscale);
+//    printf("Content scale: %f, %f\n", xscale, yscale);
     neopad_renderer_rescale(renderer, xscale);
     draw(window);
 }
@@ -196,8 +209,8 @@ void teardown(GLFWwindow *window) {
 void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
     neopad_renderer_draw_background(renderer);
-    neopad_renderer_draw_test_rect(renderer, -200, -100, -100, -200);
-    neopad_renderer_draw_test_rect(renderer, 400, 300, 500, 200);
+    neopad_renderer_draw_test_rect(renderer, -100, 0, 0, -100);
+    neopad_renderer_draw_test_rect(renderer, 0, 100, 100, 0);
     neopad_renderer_end_frame(renderer);
 }
 
@@ -214,7 +227,7 @@ void run(GLFWwindow *window) {
             .width = width,
             .height = height,
             .content_scale = scale,
-            .debug = true,
+            .debug = false,
             .native_window_handle = demo_get_native_window_handle(window),
             .native_display_type = demo_get_native_display_type(window),
             .background = (neopad_renderer_background_t) {
@@ -235,7 +248,7 @@ void run(GLFWwindow *window) {
 }
 
 int main() {
-    int width = 1300;
+    int width = 1200;
     int height = 800;
 
     GLFWwindow *window = setup(width, height);

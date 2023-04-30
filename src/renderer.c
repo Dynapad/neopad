@@ -19,6 +19,9 @@
 #define VIEW_BACKGROUND 0
 #define VIEW_CONTENT 1
 
+/// @note This is a pad-world coordinate.
+/// @note At zoom 1.0, these coordinates map to logical pixels.
+/// @note However, (0, 0) is the center of the screen.
 typedef struct neopad_vertex_s {
     float x;
     float y;
@@ -44,6 +47,8 @@ struct neopad_renderer_s {
     bgfx_init_t init;
 
     /// Back-buffer resolution.
+    /// @note For high-DPI displays, this is the resolution before scaling down.
+    /// @note Logical width is width / content_scale.
     uint32_t width;
     uint32_t height;
 
@@ -52,18 +57,33 @@ struct neopad_renderer_s {
     uint32_t target_height;
 
     /// Content scale. This is used to scale the UI on high-DPI displays.
+    /// @note A value of 1 means no scaling.
+    /// @note A value of 2 means a 2:1 ratio from logical pixel size to display pixel size (hi-dpi).
     float content_scale;
     float target_content_scale;
 
-    /// Offset. This controls the position of the content for panning.
-    float offset_x;
-    float offset_y;
-    float target_offset_x;
-    float target_offset_y;
+    /// Offset. This controls the position of the camera.
+    /// @note A value of 0 means the content is centered at (0, 0).
+    /// @note In pad-world coordinates.
+    float camera_x;
+    float camera_y;
+    float target_camera_x;
+    float target_camera_y;
 
     /// Zoom. This controls how much of the content is visible.
+    /// @note - A value of 0.5 means the content is displayed at 50%.
+    /// @note - A value of 2.0 means the content is displayed at 200%.
     float zoom;
     float target_zoom;
+
+    /// Matrices.
+    /// @note These are kept around to facilitate things like dragging,
+    ///       which requires being able to translate between screen and
+    ///       pad-world coordinates.
+    mat4 model;
+    mat4 view;
+    mat4 model_view;
+    mat4 proj;
 
     /// Background settings.
     neopad_renderer_background_t background;
@@ -87,6 +107,8 @@ struct neopad_renderer_s {
 static const bgfx_embedded_shader_t embedded_shaders[] = {
         BGFX_EMBEDDED_SHADER(vs_basic),
         BGFX_EMBEDDED_SHADER(fs_basic),
+
+        BGFX_EMBEDDED_SHADER(vs_grid),
         BGFX_EMBEDDED_SHADER(fs_grid),
         BGFX_EMBEDDED_SHADER_END()
 };
@@ -103,8 +125,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Populate ourselves
     this->width = this->target_width = init.width;
     this->height = this->target_height = init.height;
-    this->offset_x = this->target_offset_x = 0.0f;
-    this->offset_y = this->target_offset_y = 0.0f;
+    this->camera_x = this->target_camera_x = 0.0f;
+    this->camera_y = this->target_camera_y = 0.0f;
     this->content_scale = this->target_content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
     this->zoom = this->target_zoom = 1.0f;
 
@@ -146,7 +168,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     this->programs[PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
             embedded_shaders,
             renderer_type,
-            "vs_basic",
+            "vs_grid",
             "fs_grid",
             NULL);
 
@@ -155,8 +177,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             .time = 0.0f,
             .content_scale = this->content_scale,
             .zoom = this->zoom,
-            .offset_x = this->offset_x,
-            .offset_y = this->offset_y,
+            .offset_x = this->camera_x,
+            .offset_y = this->camera_y,
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor
     };
@@ -186,7 +208,41 @@ void neopad_renderer_destroy(neopad_renderer_t this) {
     free(this);
 }
 
-#pragma mark - Configuration
+#pragma mark - Coordinate Transformations
+
+void neopad_renderer_glfw2world(neopad_renderer_t this, const vec2 glfw, vec2 world) {
+//    eprintf("Window coord: %f, %f\n", p[0], p[1]);
+
+    // GLFW's coordinate system is:
+    // - (0, 0) is the top-left corner
+    // - (width, height) is the bottom-right corner (in _display_ pixels)
+    vec4 v = {glfw[0], glfw[1], 0.0f, 1.0f};
+
+    // Re-center
+    glm_vec4_sub(v, (vec4) {
+            (float) this->width / 2 / this->content_scale,
+            (float) this->height / 2 / this->content_scale,
+            0.0f, 0.0f
+    }, v);
+
+    // Invert Y axis (glfw's Y axis is inverted relative to GL)
+    glm_vec4_mul(v, (vec4) {1, -1, 1, 1}, v);
+
+//    eprintf("Camera coord: %f, %f\n", v[0], v[1]);
+
+    // Apply the camera to get unzoomed world coordinates...
+    mat4 inv_view;
+    glm_mat4_inv(this->view, inv_view);
+    glm_mat4_mulv(inv_view, v, v);
+
+    // And apply the zoom (we don't want the entire proj matrix)
+    glm_vec4_scale(v, 1.0f / this->zoom, v);
+//    eprintf("World coord: %f, %f\n", v[0], v[1]);
+
+    glm_vec2_copy((vec2) {v[0], v[1]}, world);
+}
+
+#pragma mark - Manipualtion
 
 void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
     this->target_width = width;
@@ -201,16 +257,16 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
     this->target_zoom = zoom;
 }
 
-#pragma mark - Positioning
-
-void neopad_renderer_get_position(neopad_renderer_t this, float *offset_x, float *offset_y) {
-    *offset_x = this->offset_x;
-    *offset_y = this->offset_y;
+void neopad_renderer_get_camera(neopad_renderer_t this, float *camera_x, float *camera_y) {
+    *camera_x = this->target_camera_x;
+    *camera_y = this->target_camera_y;
+    eprintf("Getting camera: %f, %f\n", *camera_x, *camera_y);
 }
 
-void neopad_renderer_set_position(neopad_renderer_t this, float offset_x, float offset_y) {
-    this->target_offset_x = offset_x;
-    this->target_offset_y = offset_y;
+void neopad_renderer_set_camera(neopad_renderer_t this, float camera_x, float camera_y) {
+    eprintf("Setting camera to: %f, %f\n", camera_x, camera_y);
+    this->target_camera_x = camera_x;
+    this->target_camera_y = camera_y;
 }
 
 #pragma mark - Rendering
@@ -222,9 +278,9 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
     }
 
-    if (this->offset_x != this->target_offset_x || this->offset_y != this->target_offset_y) {
-        this->uniforms.offset_x = this->offset_x = this->target_offset_x;
-        this->uniforms.offset_y = this->offset_y = this->target_offset_y;
+    if (this->camera_x != this->target_camera_x || this->camera_y != this->target_camera_y) {
+        this->uniforms.offset_x = this->camera_x = this->target_camera_x;
+        this->uniforms.offset_y = this->camera_y = this->target_camera_y;
         bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
     }
 
@@ -240,31 +296,64 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
-    // Set view transform.
-    mat4 view, grid_view;
-    mat4 proj;
+
+    float width = (float) this->width;
+    float height = (float) this->height;
 
     float scaled_width = (float) this->width / this->content_scale;
     float scaled_height = (float) this->height / this->content_scale;
 
-    float zoomed_width = scaled_width * this->zoom;
-    float zoomed_height = scaled_height * this->zoom;
+    vec3 camera = {this->camera_x, this->camera_y, 0.0f};
+    float zoom = this->zoom;
 
-    glm_translate_make(view, (vec3) {zoomed_width / 2.0f, zoomed_height / 2.0f, 0.0f});
-    glm_ortho(0.0f, zoomed_width, 0.0f, zoomed_height, -1.0f, 1.0f, proj);
-    glm_translate(proj, (vec3) {this->offset_x, this->offset_y, 0.0f});
+    // MATRICES
+    // --------
+
+    // Model matrix applies the content_scale to x and y (leaves z and w alone).
+    // - On non-retina displays, this is an identity matrix.
+    // - On retina displays, this will make the content appear at the same size as on non-retina displays.
+    glm_mat4_identity(this->model);
+    glm_scale(this->model, (vec3) {this->content_scale, this->content_scale, 1.0f});
+
+    // View matrix applies camera (camera position).
+    vec3 eye = {0.0f, 0.0f, 1.0f};
+    vec3 center = {0.0f, 0.0f, 0.0f};
+    vec3 up = {0.0f, 1.0f, 0.0f};
+    glm_vec3_sub(eye, camera, eye);
+    glm_vec3_sub(center, camera, center);
+    glm_lookat(eye, center, up, this->view);
+
+    // Premultiply the model and view matrices.
+    glm_mat4_mul(this->model, this->view, this->model_view);
+
+    // Orthographic Projection - View -> NDC
+    // (-w/2, -w/2), (t/2, -t/2) -> (-1, -1), (1, 1)
+    // Note that width/height here include the content scale.
+    float l = -width / 2.0f;
+    float r = width / 2.0f;
+    float b = -height / 2.0f;
+    float t = height / 2.0f;
+    glm_ortho(l / zoom, r / zoom, b / zoom, t / zoom, -1.0f, 1.0f, this->proj);
 
     // BACKGROUND
     // ----------
+    // The background uses the same view and projection matrices as the content, but
+    // it does not apply them the same way. The background is always drawn at the same
+    // size, regardless of the content scale or zoom. It renders geometry provided in
+    // clip-space coordinates. It needs the same view and projection matrices so it can
+    // invert them and use them to transform the clip-space coordinates into world-space
+    // coordinates. This allows the background to be drawn in the same world-space as the
+    // content, but at a fixed size.
 
     bgfx_set_view_clear(VIEW_BACKGROUND, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
-    bgfx_set_view_transform(VIEW_BACKGROUND, NULL, NULL);
+    bgfx_set_view_transform(VIEW_BACKGROUND, this->model_view, this->proj);
     bgfx_set_view_rect(VIEW_BACKGROUND, 0, 0, this->width, this->height);
     bgfx_touch(VIEW_BACKGROUND);
 
     // CONTENT
     // -------
-    bgfx_set_view_transform(VIEW_CONTENT, view, proj);
+
+    bgfx_set_view_transform(VIEW_CONTENT, this->model_view, this->proj);
     bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
     bgfx_touch(VIEW_CONTENT);
 
@@ -284,11 +373,16 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
     bgfx_alloc_transient_vertex_buffer(&tvb, 4, &this->vertex_layout);
     bgfx_alloc_transient_index_buffer(&tib, 6, false);
 
-    // Screen space full quad
+    // NDC full quad.
     float l = -1.0f;
     float r = 1.0f;
     float t = -1.0f;
     float b = 1.0f;
+
+    mat2 ndx_rect = {
+            {l, t},
+            {r, b},
+    };
 
     neopad_renderer_vertex_t vertices[] = {
             {l, t, 0.0f, 0x00000000},

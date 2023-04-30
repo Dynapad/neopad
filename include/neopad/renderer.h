@@ -7,11 +7,12 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "cglm/vec2.h"
 
 #pragma mark - Types
 
 /// A renderer.
-/// \note This is an opaque type.
+/// @note This is an opaque type.
 typedef struct neopad_renderer_s *neopad_renderer_t;
 
 typedef struct neopad_renderer_background_s {
@@ -64,31 +65,33 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init);
 /// Destroy a renderer.
 void neopad_renderer_destroy(neopad_renderer_t this);
 
-#pragma mark - Configuration
+#pragma mark - Coordinate Transformations
+
+/// Convert a point from screen coordinates to world coordinates.
+/// @note This is specific to GLFWs window coordinate system.
+void neopad_renderer_glfw2world(neopad_renderer_t this, const vec2 glfw, vec2 world);
+
+#pragma mark - Manipulation
 
 /// Resize the back-buffer(s) used by the renderer.
-/// \note Takes effect from the start of the next begun frame.
+/// @note Takes effect from the start of the next begun frame.
 void neopad_renderer_resize(neopad_renderer_t this, int width, int height);
 
 /// Rescale the display of the renderer.
-/// \note Takes effect on the next frame rendered.
+/// @note Takes effect on the next frame rendered.
 void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 
 /// Set the zoom of the renderer.
-/// \note Takes effect on the next frame rendered.
+/// @note Takes effect on the next frame rendered.
 void neopad_renderer_zoom(neopad_renderer_t this, float zoom);
 
-
-#pragma mark - Positioning
+/// Reposition the viewport of the renderer.
+/// @note Takes effect from the start of the next begun frame.
+void neopad_renderer_get_camera(neopad_renderer_t this, float *camera_x, float *camera_y);
 
 /// Reposition the viewport of the renderer.
-/// \note Takes effect from the start of the next begun frame.
-void neopad_renderer_get_position(neopad_renderer_t this, float *offset_x, float *offset_y);
-
-
-/// Reposition the viewport of the renderer.
-/// \note Takes effect from the start of the next begun frame.
-void neopad_renderer_set_position(neopad_renderer_t this, float offset_x, float offset_y);
+/// @note Takes effect from the start of the next begun frame.
+void neopad_renderer_set_camera(neopad_renderer_t this, float camera_x, float camera_y);
 
 #pragma mark - Frame
 
