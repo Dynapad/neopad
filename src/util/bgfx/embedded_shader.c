@@ -46,5 +46,7 @@ bgfx_program_handle_t bgfx_create_embedded_program(
     bgfx_shader_handle_t vsh = bgfx_create_embedded_shader(_es, _type, _vsName);
     bgfx_shader_handle_t fsh = bgfx_create_embedded_shader(_es, _type, _fsName);
     bgfx_program_handle_t program_handle = bgfx_create_program(vsh, fsh, _destroyShaders);
+    bgfx_destroy_shader(fsh);
+    bgfx_destroy_shader(vsh);
     return program_handle;
 }

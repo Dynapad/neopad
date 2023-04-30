@@ -104,6 +104,31 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
 }
 
+static bool mouse_down = false;
+static double drag_start_x = 0;
+static double drag_start_y = 0;
+
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            mouse_down = true;
+            glfwGetCursorPos(window, &drag_start_x, &drag_start_y);
+        } else if (action == GLFW_RELEASE) {
+            mouse_down = false;
+        }
+    }
+}
+
+void cursor_position_callback(GLFWwindow *window, double x, double y) {
+    if (mouse_down) {
+        float delta_x = x - drag_start_x;
+        float delta_y = -(y - drag_start_y);
+        printf("Drag delta: %f, %f\n", delta_x, delta_y);
+
+        neopad_renderer_set_position(renderer, delta_x, delta_y);
+    }
+}
+
 static float zoom = 1;
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // If zoom is positive, zoom in. If zoom is negative, zoom out.
@@ -151,6 +176,8 @@ GLFWwindow *setup(int width, int height) {
     }
 
     glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetWindowContentScaleCallback(window, window_content_scale_callback);
@@ -205,7 +232,7 @@ void run(GLFWwindow *window) {
 }
 
 int main() {
-    int width = 1280;
+    int width = 1300;
     int height = 800;
 
     GLFWwindow *window = setup(width, height);

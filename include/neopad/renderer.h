@@ -61,6 +61,11 @@ neopad_renderer_t neopad_renderer_create();
 /// \param init The initialization parameters.
 void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init);
 
+/// Destroy a renderer.
+void neopad_renderer_destroy(neopad_renderer_t this);
+
+#pragma mark - Configuration
+
 /// Resize the back-buffer(s) used by the renderer.
 /// \note Takes effect from the start of the next begun frame.
 void neopad_renderer_resize(neopad_renderer_t this, int width, int height);
@@ -73,8 +78,17 @@ void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 /// \note Takes effect on the next frame rendered.
 void neopad_renderer_zoom(neopad_renderer_t this, float zoom);
 
-/// Destroy a renderer.
-void neopad_renderer_destroy(neopad_renderer_t this);
+
+#pragma mark - Positioning
+
+/// Reposition the viewport of the renderer.
+/// \note Takes effect from the start of the next begun frame.
+void neopad_renderer_get_position(neopad_renderer_t this, float *offset_x, float *offset_y);
+
+
+/// Reposition the viewport of the renderer.
+/// \note Takes effect from the start of the next begun frame.
+void neopad_renderer_set_position(neopad_renderer_t this, float offset_x, float offset_y);
 
 #pragma mark - Frame
 

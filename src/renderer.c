@@ -31,8 +31,10 @@ typedef struct neopad_uniforms_s {
     float time;
     float content_scale;
     float zoom;
-    float _unused2;
+    float _unused;
 
+    float offset_x;
+    float offset_y;
     float grid_major;
     float grid_minor;
 } neopad_renderer_uniforms_t;
@@ -52,6 +54,12 @@ struct neopad_renderer_s {
     /// Content scale. This is used to scale the UI on high-DPI displays.
     float content_scale;
     float target_content_scale;
+
+    /// Offset. This controls the position of the content for panning.
+    float offset_x;
+    float offset_y;
+    float target_offset_x;
+    float target_offset_y;
 
     /// Zoom. This controls how much of the content is visible.
     float zoom;
@@ -93,14 +101,13 @@ neopad_renderer_t neopad_renderer_create() {
 
 void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Populate ourselves
-    this->width = init.width;
-    this->height = init.height;
-    this->target_width = this->width;
-    this->target_height = this->height;
-    this->content_scale = init.content_scale ? init.content_scale : 1.0f;
-    this->target_content_scale = this->content_scale;
-    this->zoom = 1.0f;
-    this->target_zoom = this->zoom;
+    this->width = this->target_width = init.width;
+    this->height = this->target_height = init.height;
+    this->offset_x = this->target_offset_x = 0.0f;
+    this->offset_y = this->target_offset_y = 0.0f;
+    this->content_scale = this->target_content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
+    this->zoom = this->target_zoom = 1.0f;
+
     this->background = init.background;
 
     // Switch to single-threaded mode for simplicity...
@@ -109,10 +116,6 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Initialize BGFX
     bgfx_init_ctor(&this->init);
-    #ifdef BX_PLATFORM_WINDOWS
-    // Direct3D11 has a bug of some in init...
-    this->init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
-    #endif
     this->init.resolution.width = init.width;
     this->init.resolution.height = init.height;
     this->init.platformData.nwh = init.native_window_handle;
@@ -152,6 +155,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             .time = 0.0f,
             .content_scale = this->content_scale,
             .zoom = this->zoom,
+            .offset_x = this->offset_x,
+            .offset_y = this->offset_y,
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor
     };
@@ -171,6 +176,18 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             BGFX_BUFFER_NONE);
 }
 
+void neopad_renderer_destroy(neopad_renderer_t this) {
+    bgfx_destroy_dynamic_index_buffer(this->index_buffer);
+    bgfx_destroy_dynamic_vertex_buffer(this->vertex_buffer);
+    bgfx_destroy_uniform(this->uniform_handle);
+    bgfx_destroy_program(this->programs[PROGRAM_BACKGROUND]);
+    bgfx_destroy_program(this->programs[PROGRAM_BASIC]);
+    bgfx_shutdown();
+    free(this);
+}
+
+#pragma mark - Configuration
+
 void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
     this->target_width = width;
     this->target_height = height;
@@ -184,9 +201,16 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
     this->target_zoom = zoom;
 }
 
-void neopad_renderer_destroy(neopad_renderer_t this) {
-    bgfx_shutdown();
-    free(this);
+#pragma mark - Positioning
+
+void neopad_renderer_get_position(neopad_renderer_t this, float *offset_x, float *offset_y) {
+    *offset_x = this->offset_x;
+    *offset_y = this->offset_y;
+}
+
+void neopad_renderer_set_position(neopad_renderer_t this, float offset_x, float offset_y) {
+    this->target_offset_x = offset_x;
+    this->target_offset_y = offset_y;
 }
 
 #pragma mark - Rendering
@@ -196,6 +220,12 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         this->width = this->target_width;
         this->height = this->target_height;
         bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
+    }
+
+    if (this->offset_x != this->target_offset_x || this->offset_y != this->target_offset_y) {
+        this->uniforms.offset_x = this->offset_x = this->target_offset_x;
+        this->uniforms.offset_y = this->offset_y = this->target_offset_y;
+        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
     }
 
     if (this->content_scale != this->target_content_scale) {
@@ -211,7 +241,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
     // Set view transform.
-    mat4 view;
+    mat4 view, grid_view;
     mat4 proj;
 
     float scaled_width = (float) this->width / this->content_scale;
@@ -222,6 +252,7 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
 
     glm_translate_make(view, (vec3) {zoomed_width / 2.0f, zoomed_height / 2.0f, 0.0f});
     glm_ortho(0.0f, zoomed_width, 0.0f, zoomed_height, -1.0f, 1.0f, proj);
+    glm_translate(proj, (vec3) {this->offset_x, this->offset_y, 0.0f});
 
     // BACKGROUND
     // ----------
@@ -254,14 +285,16 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
     bgfx_alloc_transient_index_buffer(&tib, 6, false);
 
     // Screen space full quad
-    float w = (float) this->width * this->zoom;
-    float h = (float) this->height * this->zoom;
+    float l = 0.0f;
+    float r = (float) this->width;
+    float t = 0.0f;
+    float b = (float) this->height;
 
     neopad_renderer_vertex_t vertices[] = {
-            {0.0f, 0.0f, 0.0f, 0x00000000},
-            {w,    0.0f, 0.0f, 0x00000000},
-            {w,    h,    0.0f, 0x00000000},
-            {0.0f, h,    0.0f, 0x00000000},
+            {l, t, 0.0f, 0x00000000},
+            {r, t, 0.0f, 0x00000000},
+            {r, b, 0.0f, 0x00000000},
+            {l, b, 0.0f, 0x00000000},
     };
     memcpy(tvb.data, vertices, sizeof(vertices));
 
@@ -284,23 +317,6 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
 }
 
 #pragma mark - Testing
-
-const float TEST_L = -100.0f;
-const float TEST_R = 100.0f;
-const float TEST_T = 100.0f;
-const float TEST_B = -100.0f;
-
-const neopad_renderer_vertex_t TEST_VERTICES[] = {
-        {TEST_L, TEST_B, 0.0f, 0xff0000ff},
-        {TEST_L, TEST_T, 0.0f, 0xff00ff00},
-        {TEST_R, TEST_T, 0.0f, 0xffff0000},
-        {TEST_R, TEST_B, 0.0f, 0xffffffff},
-};
-
-const uint16_t TEST_INDICES[] = {
-        0, 1, 2,
-        0, 2, 3,
-};
 
 void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, float r, float b) {
     bgfx_transient_vertex_buffer_t tvb;
