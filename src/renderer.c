@@ -144,8 +144,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor,
     };
-    this->uniform_handle = bgfx_create_uniform("u_params", BGFX_UNIFORM_TYPE_VEC4, 1);
-    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 1);
+    this->uniform_handle = bgfx_create_uniform("u_params", BGFX_UNIFORM_TYPE_VEC4, 2);
+    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
 
     // TODO: REMOVE THIS TEST STUFF
     // Initialize test vertex buffer
@@ -168,7 +168,7 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
 void neopad_renderer_rescale(neopad_renderer_t this, float content_scale) {
     this->content_scale = content_scale;
     this->uniforms.content_scale = content_scale;
-    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 1);
+    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
 }
 
 void neopad_renderer_destroy(neopad_renderer_t this) {
