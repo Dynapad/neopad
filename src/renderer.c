@@ -165,8 +165,10 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
     this->target_height = height;
 }
 
-void neopad_renderer_rescale(neopad_renderer_t this, float scale) {
-    this->content_scale = scale;
+void neopad_renderer_rescale(neopad_renderer_t this, float content_scale) {
+    this->content_scale = content_scale;
+    this->uniforms.content_scale = content_scale;
+    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 1);
 }
 
 void neopad_renderer_destroy(neopad_renderer_t this) {

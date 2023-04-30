@@ -16,7 +16,6 @@ typedef struct neopad_renderer_s *neopad_renderer_t;
 
 typedef struct neopad_renderer_background_s {
     uint32_t color;
-    uint32_t grid_color;
 
     float grid_major;
     float grid_minor;
@@ -67,7 +66,7 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height);
 
 /// Rescale the display of the renderer.
 /// \note Takes effect on the next frame rendered.
-void neopad_renderer_rescale(neopad_renderer_t this, float scale);
+void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 
 /// Destroy a renderer.
 void neopad_renderer_destroy(neopad_renderer_t this);
