@@ -109,6 +109,10 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Initialize BGFX
     bgfx_init_ctor(&this->init);
+    #ifdef BX_PLATFORM_WINDOWS
+    // Direct3D11 has a bug of some in init...
+    this->init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
+    #endif
     this->init.resolution.width = init.width;
     this->init.resolution.height = init.height;
     this->init.platformData.nwh = init.native_window_handle;
