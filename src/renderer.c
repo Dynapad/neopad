@@ -30,7 +30,7 @@ typedef struct neopad_vertex_s {
 typedef struct neopad_uniforms_s {
     float time;
     float content_scale;
-    float _unused1;
+    float zoom;
     float _unused2;
 
     float grid_major;
@@ -51,6 +51,11 @@ struct neopad_renderer_s {
 
     /// Content scale. This is used to scale the UI on high-DPI displays.
     float content_scale;
+    float target_content_scale;
+
+    /// Zoom. This controls how much of the content is visible.
+    float zoom;
+    float target_zoom;
 
     /// Background settings.
     neopad_renderer_background_t background;
@@ -90,9 +95,12 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Populate ourselves
     this->width = init.width;
     this->height = init.height;
-    this->target_width = init.width;
-    this->target_height = init.height;
+    this->target_width = this->width;
+    this->target_height = this->height;
     this->content_scale = init.content_scale ? init.content_scale : 1.0f;
+    this->target_content_scale = this->content_scale;
+    this->zoom = 1.0f;
+    this->target_zoom = this->zoom;
     this->background = init.background;
 
     // Switch to single-threaded mode for simplicity...
@@ -139,6 +147,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     this->uniforms = (neopad_renderer_uniforms_t) {
             .time = 0.0f,
             .content_scale = this->content_scale,
+            .zoom = this->zoom,
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor
     };
@@ -164,9 +173,11 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
 }
 
 void neopad_renderer_rescale(neopad_renderer_t this, float content_scale) {
-    this->content_scale = content_scale;
-    this->uniforms.content_scale = content_scale;
-    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+    this->target_content_scale = content_scale;
+}
+
+void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
+    this->target_zoom = zoom;
 }
 
 void neopad_renderer_destroy(neopad_renderer_t this) {
@@ -183,6 +194,15 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
     }
 
+    if (this->content_scale != this->target_content_scale) {
+        this->uniforms.content_scale = this->content_scale = this->target_content_scale;
+        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+    }
+
+    if (this->zoom != this->target_zoom) {
+        this->uniforms.zoom = this->zoom = this->target_zoom;
+        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+    }
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
@@ -193,8 +213,11 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     float scaled_width = (float) this->width / this->content_scale;
     float scaled_height = (float) this->height / this->content_scale;
 
-    glm_translate_make(view, (vec3) {scaled_width / 2.0f, scaled_height / 2.0f, 0.0f});
-    glm_ortho(0.0f, scaled_width, 0.0f, scaled_height, -1.0f, 1.0f, proj);
+    float zoomed_width = scaled_width * this->zoom;
+    float zoomed_height = scaled_height * this->zoom;
+
+    glm_translate_make(view, (vec3) {zoomed_width / 2.0f, zoomed_height / 2.0f, 0.0f});
+    glm_ortho(0.0f, zoomed_width, 0.0f, zoomed_height, -1.0f, 1.0f, proj);
 
     // BACKGROUND
     // ----------
@@ -227,8 +250,8 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
     bgfx_alloc_transient_index_buffer(&tib, 6, false);
 
     // Screen space full quad
-    float w = (float) this->width;
-    float h = (float) this->height;
+    float w = (float) this->width * this->zoom;
+    float h = (float) this->height * this->zoom;
 
     neopad_renderer_vertex_t vertices[] = {
             {0.0f, 0.0f, 0.0f, 0x00000000},

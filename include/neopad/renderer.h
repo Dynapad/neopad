@@ -69,6 +69,10 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height);
 /// \note Takes effect on the next frame rendered.
 void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 
+/// Set the zoom of the renderer.
+/// \note Takes effect on the next frame rendered.
+void neopad_renderer_zoom(neopad_renderer_t this, float zoom);
+
 /// Destroy a renderer.
 void neopad_renderer_destroy(neopad_renderer_t this);
 

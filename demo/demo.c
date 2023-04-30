@@ -107,11 +107,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 static float zoom = 1;
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // If zoom is positive, zoom in. If zoom is negative, zoom out.
-    printf("Scroll: %f\n", y_offset);
+
     // Limit zoom rate.
     zoom += glm_clamp((float) y_offset, -0.01f, 0.01f);
-    // Clamp zoom betsween 0.1 and 1.
-    zoom = glm_clamp(zoom, 0.1f, 1.0f);
+    // Clamp zoom betsween 0.1 and 2.0.
+    zoom = glm_clamp(zoom, 0.1f, 2.0f);
+
+    neopad_renderer_zoom(renderer, zoom);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -165,7 +167,7 @@ void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
     neopad_renderer_draw_background(renderer);
     neopad_renderer_draw_test_rect(renderer, -200, -100, -100, -200);
-//    neopad_renderer_draw_test_rect(renderer, -100, 100, 100, -100);
+    neopad_renderer_draw_test_rect(renderer, 400, 300, 500, 200);
     neopad_renderer_end_frame(renderer);
 }
 
