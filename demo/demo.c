@@ -7,9 +7,11 @@
 
 #pragma mark - Includes
 #define GLFW_INCLUDE_NONE
+
 #include <GLFW/glfw3.h>
 
 #include <bx/platform.h>
+
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
 #	if ENTRY_CONFIG_USE_WAYLAND
 #		include <wayland-egl.h>
@@ -25,6 +27,7 @@
 #	define GLFW_EXPOSE_NATIVE_WIN32
 #	define GLFW_EXPOSE_NATIVE_WGL
 #endif
+
 #include <GLFW/glfw3native.h>
 
 #include <cglm/vec2.h>
@@ -107,6 +110,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 static bool mouse_down = false;
 static double drag_start_x = 0;
 static double drag_start_y = 0;
+static double drag_delta_x = 0;
+static double drag_delta_y = 0;
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -121,35 +126,33 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 
 void cursor_position_callback(GLFWwindow *window, double x, double y) {
     if (mouse_down) {
-        float delta_x = x - drag_start_x;
-        float delta_y = -(y - drag_start_y);
-        printf("Drag delta: %f, %f\n", delta_x, delta_y);
+        drag_delta_x = (x - drag_start_x);
+        drag_delta_y = -(y - drag_start_y);
 
-        neopad_renderer_set_position(renderer, delta_x, delta_y);
+        neopad_renderer_set_position(renderer, (float) drag_delta_x, (float) drag_delta_y);
     }
 }
 
 static float zoom = 1;
+
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // If zoom is positive, zoom in. If zoom is negative, zoom out.
 
     // Limit zoom rate.
-    zoom += glm_clamp((float) y_offset, -0.01f, 0.01f);
+    zoom += glm_clamp((float) y_offset, -0.02f, 0.02f);
     // Clamp zoom betsween 0.1 and 2.0.
     zoom = glm_clamp(zoom, 0.1f, 2.0f);
 
     neopad_renderer_zoom(renderer, zoom);
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
+void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     if (renderer == NULL) return;
     neopad_renderer_resize(renderer, width, height);
     draw(window);
 }
 
-void window_content_scale_callback(GLFWwindow* window, float xscale, float yscale)
-{
+void window_content_scale_callback(GLFWwindow *window, float xscale, float yscale) {
     if (renderer == NULL) return;
     printf("Content scale: %f, %f\n", xscale, yscale);
     neopad_renderer_rescale(renderer, xscale);
@@ -208,18 +211,18 @@ void run(GLFWwindow *window) {
 
     renderer = neopad_renderer_create();
     neopad_renderer_init(renderer, (neopad_renderer_init_t) {
-        .width = width,
-        .height = height,
-        .content_scale = scale,
-        .debug = true,
-        .native_window_handle = demo_get_native_window_handle(window),
-        .native_display_type = demo_get_native_display_type(window),
-        .background = (neopad_renderer_background_t) {
-            .color = 0x202020FF,
-            .grid_enabled = true,
-            .grid_major = 100,
-            .grid_minor = 25,
-        },
+            .width = width,
+            .height = height,
+            .content_scale = scale,
+            .debug = true,
+            .native_window_handle = demo_get_native_window_handle(window),
+            .native_display_type = demo_get_native_display_type(window),
+            .background = (neopad_renderer_background_t) {
+                    .color = 0x202020FF,
+                    .grid_enabled = true,
+                    .grid_major = 100,
+                    .grid_minor = 25,
+            },
     });
 
     while (!glfwWindowShouldClose(window)) {

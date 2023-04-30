@@ -20,16 +20,18 @@ void main()
 {
     vec2 st = v_position.xy;
     vec3 color = vec3(0.0, 0.0, 0.0);
+    vec2 offset = vec2(u_offset_x, u_offset_y);
+    vec2 offset_st = offset * (1.0/u_zoom) * (2.0 * u_content_scale) / u_viewRect.zw;
 
     float major = (1.0 / u_grid_major);
     float minor = (1.0 / u_grid_minor);
 
-    vec2 grid_st = st * vec2(u_viewRect.z / 2.0, u_viewRect.w / 2.0);
-    color += vec3(0.2, 0.2, 0.2) * grid(grid_st, u_zoom * (1.0 / u_content_scale) * major);
-    color += vec3(0.1, 0.1, 0.1) * grid(grid_st, u_zoom * (1.0 / u_content_scale) * minor);
+    vec2 grid_st = st * u_viewRect.zw / 2.0;
+    color += vec3(0.2, 0.2, 0.2) * grid(grid_st - (offset / u_zoom * u_content_scale), major * u_zoom / u_content_scale);
+    color += vec3(0.1, 0.1, 0.1) * grid(grid_st - (offset / u_zoom * u_content_scale), minor * u_zoom / u_content_scale);
 
-    color += vec3(1.0, 0.0, 0.0) * x_axis(st);
-    color += vec3(0.0, 1.0, 0.0) * y_axis(st);
+    color += vec3(1.0, 0.0, 0.0) * x_axis(st - offset_st);
+    color += vec3(0.0, 1.0, 0.0) * y_axis(st - offset_st);
 
 	gl_FragColor = vec4(color, 1.0);
 }

@@ -258,7 +258,7 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     // ----------
 
     bgfx_set_view_clear(VIEW_BACKGROUND, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
-    bgfx_set_view_transform(VIEW_BACKGROUND, NULL, proj);
+    bgfx_set_view_transform(VIEW_BACKGROUND, NULL, NULL);
     bgfx_set_view_rect(VIEW_BACKGROUND, 0, 0, this->width, this->height);
     bgfx_touch(VIEW_BACKGROUND);
 
@@ -285,10 +285,10 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
     bgfx_alloc_transient_index_buffer(&tib, 6, false);
 
     // Screen space full quad
-    float l = 0.0f;
-    float r = (float) this->width;
-    float t = 0.0f;
-    float b = (float) this->height;
+    float l = -1.0f;
+    float r = 1.0f;
+    float t = -1.0f;
+    float b = 1.0f;
 
     neopad_renderer_vertex_t vertices[] = {
             {l, t, 0.0f, 0x00000000},
