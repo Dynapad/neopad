@@ -17,11 +17,12 @@ typedef struct neopad_renderer_s *neopad_renderer_t;
 typedef struct neopad_renderer_background_s {
     uint32_t color;
 
+    bool grid_enabled;
     float grid_major;
     float grid_minor;
 
-    bool show_axes;
-    bool show_grid;
+    uint32_t x_axis_color;
+    uint32_t y_axis_color;
 } neopad_renderer_background_t;
 
 /// Initialization parameters for a renderer.

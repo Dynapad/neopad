@@ -35,8 +35,6 @@ typedef struct neopad_uniforms_s {
 
     float grid_major;
     float grid_minor;
-    float _unused3;
-    float _unused4;
 } neopad_renderer_uniforms_t;
 
 struct neopad_renderer_s {
@@ -142,7 +140,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             .time = 0.0f,
             .content_scale = this->content_scale,
             .grid_major = this->background.grid_major,
-            .grid_minor = this->background.grid_minor,
+            .grid_minor = this->background.grid_minor
     };
     this->uniform_handle = bgfx_create_uniform("u_params", BGFX_UNIFORM_TYPE_VEC4, 2);
     bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
@@ -218,6 +216,10 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
 #pragma mark - Drawing
 
 void neopad_renderer_draw_background(neopad_renderer_t this) {
+    if (!this->background.grid_enabled) {
+        return;
+    }
+
     bgfx_transient_vertex_buffer_t tvb;
     bgfx_transient_index_buffer_t tib;
 
