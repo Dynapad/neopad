@@ -34,7 +34,7 @@ void main()
     //     x in [0, w], y in [0, h], z in [0, 1]
     //     (0, 0) is the bottom-left corner of the window.
     //     (0.5, 0.5) is the bottom-left pixel center.
-    vec2 xy = gl_FragCoord.st;
+    vec2 xy = gl_FragCoord.xy;
 
     // Transform back to normalized device coordinates (matches quad geometry).
     // Our projection is orthographic, so this is equivalent to clip space.
