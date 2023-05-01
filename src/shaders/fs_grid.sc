@@ -51,7 +51,7 @@ void main()
     vec3 color = vec3(0.0, 0.0, 0.0);
 
     // Approximately the world-pixel width of a single pixel at the current zoom level.
-    float width = max(1.0, ceil(1.0 / u_zoom));
+    float width = max(1.0, ceil(1.0 / u_zoom) + 1.0);
 
     // Single world-pixel major and minor grid lines.
     color += gray333 * pixgrid(xy_world, u_grid_major, width);

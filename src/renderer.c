@@ -277,7 +277,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
         this->height = this->target_height;
-        bgfx_reset(this->width, this->height, 0, this->init.resolution.format);
+        bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
     }
 
     if (this->camera_x != this->target_camera_x || this->camera_y != this->target_camera_y) {
