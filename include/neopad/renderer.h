@@ -56,6 +56,8 @@ typedef struct neopad_renderer_init_s {
 
     /// The background settings.
     neopad_renderer_background_t background;
+
+
 } neopad_renderer_init_t;
 
 #pragma mark - Lifecycle
@@ -129,12 +131,19 @@ void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, fl
 
 #pragma mark - Line Drawing
 
-void neopad_renderer_pen_begin(neopad_renderer_t this, float x, float y);
+/// Begin a series of points.
+/// \param this The renderer.
+/// \param p The first point.
+void neopad_renderer_begin_points(neopad_renderer_t this, vec2 p);
 
-void neopad_renderer_pen_draw_to(neopad_renderer_t this, float x, float y);
+/// Add a point to the current series.
+/// \param this The renderer.
+/// \param p The point to add.
+void neopad_renderer_pen_add_point(neopad_renderer_t this, vec2 p);
 
-void neopad_renderer_pen_end(neopad_renderer_t this, float x, float y);
-
+/// End a series of points.
+/// \param this The renderer.
+void neopad_renderer_end_points(neopad_renderer_t this);
 
 #pragma mark - Demo
 

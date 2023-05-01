@@ -126,9 +126,38 @@ void error_callback(int error, const char *description) {
     eprintf("GLFW Error: %s\n", description);
 }
 
+static int vim_exit = 0;
+static int emacs_exit = 0;
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_ESCAPE) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    if (action == GLFW_PRESS) {
+        switch (key) {
+            case GLFW_KEY_ESCAPE:
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+                break;
+            case GLFW_KEY_SPACE:
+                neopad_renderer_set_camera(renderer, (vec2){0, 0});
+                neopad_renderer_zoom(renderer, 1);
+            case GLFW_KEY_SEMICOLON:
+                if (mods & GLFW_MOD_SHIFT) vim_exit = 1;
+                break;
+            case GLFW_KEY_C:
+                if (emacs_exit == 1 && mods & GLFW_MOD_CONTROL) {
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
+                break;
+            case GLFW_KEY_Q:
+                if (vim_exit == 1) vim_exit = 2;
+                break;
+            case GLFW_KEY_X:
+                if (mods & GLFW_MOD_CONTROL) emacs_exit = 1;
+            case GLFW_KEY_ENTER:
+                if (vim_exit == 2) {
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
+                break;
+            default:
+                vim_exit = 0;
+        }
     }
 }
 
@@ -167,9 +196,12 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
 //    eprintf("Scroll: %f, %f\n", x_offset, y_offset);
 
+    // todo: enable interpolation of zooming, and handle graceful stopping
+    //       when the user stops scrolls opposite an ongoing interpolation.
+
     // Limit zoom rate.
     zoom += glm_clamp((float) y_offset, -0.02f, 0.02f);
-    // Clamp zoom betsween 0.1 and 2.0.
+    // Clamp zoom betwixt 0.1 and 2.0.
     zoom = glm_clamp(zoom, 0.01f, 10.0f);
 
     neopad_renderer_zoom(renderer, zoom);

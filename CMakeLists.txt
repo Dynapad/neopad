@@ -56,5 +56,5 @@ add_subdirectory(demo)
 
 # Add tests (only if this is the main project!)
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
-    add_subdirectory(tests)
+    add_subdirectory(test)
 endif()
