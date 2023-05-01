@@ -308,7 +308,7 @@ void run(GLFWwindow *window) {
             .debug = true,
             .native_window_handle = demo_get_native_window_handle(window),
             .native_display_type = demo_get_native_display_type(window),
-            .background = (neopad_renderer_background_t) {
+            .background = {
                     .color = 0x202020FF,
                     .grid_enabled = true,
                     .grid_major = 400,

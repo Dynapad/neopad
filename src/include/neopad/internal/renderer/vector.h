@@ -7,10 +7,13 @@
 
 #include "module.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 
-/// Renderer module for vector graphics.
-typedef struct neopad_renderer_vector_module_s {
+typedef struct neopad_renderer_module_vector_s {
+    struct neopad_renderer_module_base_s base;
+} *neopad_renderer_module_vector_t;
 
-} neopad_renderer_vector_module_t;
+neopad_renderer_module_t neopad_renderer_module_vector_create(void);
 
 #endif //NEOPAD_RENDERER_VECTOR_INTERNAL_H

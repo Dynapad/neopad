@@ -20,17 +20,6 @@ typedef struct neopad_renderer_s *neopad_renderer_t;
 /// @todo Make this actually const. Currently blocked by cglm's lack of const qualifiers.
 typedef /*const*/ struct neopad_renderer_s *neopad_renderer_const_t;
 
-typedef struct neopad_renderer_background_s {
-    uint32_t color;
-
-    bool grid_enabled;
-    float grid_major;
-    float grid_minor;
-
-    uint32_t x_axis_color;
-    uint32_t y_axis_color;
-} neopad_renderer_background_t;
-
 /// Initialization parameters for a renderer.
 typedef struct neopad_renderer_init_s {
     /// The name of the renderer.
@@ -55,7 +44,12 @@ typedef struct neopad_renderer_init_s {
     void *native_display_type;
 
     /// The background settings.
-    neopad_renderer_background_t background;
+    struct {
+        uint32_t color;
+        bool grid_enabled;
+        float grid_major;
+        float grid_minor;
+    } background;
 } neopad_renderer_init_t;
 
 #pragma mark - Lifecycle

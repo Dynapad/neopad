@@ -25,8 +25,6 @@
 #define VIEW_BACKGROUND 0
 #define VIEW_CONTENT 1
 
-#define MODULE_COUNT 1
-
 /// @note This is a pad-world coordinate.
 /// @note At zoom 1.0, these coordinates map to logical pixels.
 /// @note However, (0, 0) is the center of the screen.

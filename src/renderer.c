@@ -1,16 +1,15 @@
 //
 // Created by Dylan Lukes on 4/28/23.
 //
-#include "neopad/renderer.h"
-#include "neopad/internal/renderer.h"
-#include "neopad/internal/log.h"
-
-#include "cglm/affine.h"
-#include "neopad/internal/renderer/background.h"
+#include <cglm/affine.h>
 #include <cglm/cam.h>
-
 #include <memory.h>
 
+#include "neopad/renderer.h"
+#include "neopad/internal/log.h"
+#include "neopad/internal/renderer.h"
+#include "neopad/internal/renderer/background.h"
+#include "neopad/internal/renderer/vector.h"
 
 #pragma mark - Lifecycle
 
@@ -33,7 +32,8 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     this->zoom = this->target_zoom = 1.0f;
 
     // Populate modules
-    this->modules[0] = (neopad_renderer_module_t) { .background = neopad_renderer_module_background };
+    this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create();
+    this->modules[NEOPAD_RENDERER_MODULE_VECTOR] = neopad_renderer_module_vector_create();
 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
@@ -110,6 +110,13 @@ void neopad_renderer_teardown(neopad_renderer_t this) {
 }
 
 void neopad_renderer_destroy(neopad_renderer_t this) {
+    // Per-module destruction, in reverse creation order
+    for (int i = NEOPAD_RENDERER_MODULE_COUNT - 1; i >= 0; i--) {
+        neopad_renderer_module_t mod = this->modules[i];
+        if (mod.base->destroy) {
+            mod.base->destroy(mod);
+        }
+    }
     free(this);
 }
 

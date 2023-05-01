@@ -8,7 +8,8 @@
 #include "bgfx/c99/bgfx.h"
 
 #define NEOPAD_RENDERER_MODULE_BACKGROUND 0
-#define NEOPAD_RENDERER_MODULE_COUNT 1
+#define NEOPAD_RENDERER_MODULE_VECTOR 1
+#define NEOPAD_RENDERER_MODULE_COUNT 2
 
 // Forward declaration of the renderer opaque pointer type to avoid circular dependencies.
 typedef struct neopad_renderer_s *neopad_renderer_t;
@@ -39,6 +40,9 @@ typedef struct neopad_renderer_module_base_s {
 
     /// Render
     void (*render)(neopad_renderer_module_t module, neopad_renderer_t renderer);
+
+    /// Destructor
+    void (*destroy)(neopad_renderer_module_t module);
 } *neopad_renderer_module_base_t;
 
 #endif //NEOPAD_RENDERER_MODULE_INTERNAL_H

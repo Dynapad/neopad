@@ -3,8 +3,8 @@
 //
 //
 
-#ifndef NEOPAD_BACKGROUND_INTERNAL_H
-#define NEOPAD_BACKGROUND_INTERNAL_H
+#ifndef NEOPAD_RENDERER_BACKGROUND_INTERNAL_H
+#define NEOPAD_RENDERER_BACKGROUND_INTERNAL_H
 
 #include "module.h"
 
@@ -24,6 +24,6 @@ typedef struct neopad_renderer_module_background_s {
     bgfx_index_buffer_handle_t ibo;
 } *neopad_renderer_module_background_t;
 
-extern neopad_renderer_module_background_t neopad_renderer_module_background;
+neopad_renderer_module_t neopad_renderer_module_background_create(void);
 
-#endif //NEOPAD_BACKGROUND_INTERNAL_H
+#endif //NEOPAD_RENDERER_BACKGROUND_INTERNAL_H

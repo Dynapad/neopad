@@ -8,7 +8,6 @@
 #include <memory.h>
 
 void neopad_renderer_background_module_on_setup(neopad_renderer_module_t module, neopad_renderer_t renderer) {
-    // No setup required.
     renderer->uniforms.grid_major = module.background->grid_major;
     renderer->uniforms.grid_minor = module.background->grid_minor;
 }
@@ -81,17 +80,28 @@ void neopad_renderer_background_module_on_end_frame(neopad_renderer_module_t mod
     bgfx_touch(view_id);
 }
 
-neopad_renderer_module_background_t neopad_renderer_module_background = &(struct neopad_renderer_module_background_s) {
-        .base = {
-                .name = "background",
-                .on_setup = neopad_renderer_background_module_on_setup,
-                .on_teardown = neopad_renderer_background_module_on_teardown,
-                .on_begin_frame = neopad_renderer_background_module_on_begin_frame,
-                .on_end_frame = neopad_renderer_background_module_on_end_frame,
-                .render = neopad_renderer_background_module_on_render,
-        },
-        .color = 0x00000000,
-        .grid_enabled = true,
-        .grid_major = 400.0f,
-        .grid_minor = 100.0f
-};
+void neopad_renderer_module_background_destroy(neopad_renderer_module_background_t module) {
+    free(module);
+}
+
+neopad_renderer_module_t neopad_renderer_module_background_create(void) {
+    neopad_renderer_module_background_t module = malloc(sizeof(struct neopad_renderer_module_background_s));
+
+    memcpy(module, &(struct neopad_renderer_module_background_s) {
+            .base = {
+                    .name = "background",
+                    .on_setup = neopad_renderer_background_module_on_setup,
+                    .on_teardown = neopad_renderer_background_module_on_teardown,
+                    .on_begin_frame = neopad_renderer_background_module_on_begin_frame,
+                    .on_end_frame = neopad_renderer_background_module_on_end_frame,
+                    .render = neopad_renderer_background_module_on_render,
+                    .destroy = neopad_renderer_module_background_destroy,
+            },
+            .color = 0x333333ff,
+            .grid_enabled = true,
+            .grid_major = 100.0f,
+            .grid_minor = 25.0f
+    }, sizeof(struct neopad_renderer_module_background_s));
+
+    return (neopad_renderer_module_t) { .background = module };
+}
