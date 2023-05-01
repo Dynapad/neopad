@@ -33,7 +33,7 @@ typedef struct neopad_vertex_s {
 /// Structure matching defines in shaders/uniforms.sh
 typedef struct neopad_uniforms_s {
     float time;
-    float _unused0;
+    float zoom;
     float _unused1;
     float _unused2;
 
@@ -175,11 +175,11 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Initialize uniforms
     this->uniforms = (neopad_renderer_uniforms_t) {
             .time = 0.0f,
+            .zoom = this->zoom,
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor
     };
     this->uniform_handle = bgfx_create_uniform("u_params", BGFX_UNIFORM_TYPE_VEC4, 2);
-    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
 
     // TODO: REMOVE THIS TEST STUFF
     // Initialize test vertex buffer
@@ -288,7 +288,11 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
 
     if (this->zoom != this->target_zoom) {
         this->zoom = this->target_zoom;
+        this->uniforms.zoom = this->zoom;
     }
+
+    // Update any uniforms that have changed (or really, just all of them).
+    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {

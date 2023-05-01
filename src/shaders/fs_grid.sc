@@ -4,15 +4,15 @@ $input v_color0
 #include "uniforms.sh"
 
 // Single pixel line at x = x0 (or y = y0).
-float hairline(float x, float x0) {
-    return step(x0 - 0.5, x) - step(x0 + 0.5, x);
+float hairline(float x, float x0, float width) {
+    return step(x0 - width/2.0, x) - step(x0 + width/2.0, x);
 }
 
-// Grid with lines every period pixels.
-float grid(vec2 xy, float period) {
-    float res = 1. / period;
+// Grid with lines every tick world-pixels.
+float grid(vec2 xy, float tick, float width) {
+    float res = 1. / tick;
     vec2 grid = fract(xy * res);
-    return 1. - (step(res, grid.x) * step(res, grid.y));
+    return max(0, 1. - (step(res, grid.x) * step(res, grid.y)));
 }
 
 #define gray333 vec3_splat(0.2)
@@ -43,13 +43,16 @@ void main()
 
     vec3 color = vec3(0.0, 0.0, 0.0);
 
-    // Single pixel major and minor grid lines.
-    color += gray333 * grid(xy_world, u_grid_major);
-    color += gray111 * grid(xy_world, u_grid_minor);
+    // Approximately the world-pixel width of a single pixel at the current zoom level.
+    float width = max(1.0, ceil(1.0 / u_zoom));
 
-    // Single pixel axes lines.
-    color += red   * hairline(xy_world.y, 0.);
-    color += green * hairline(xy_world.x, 0.);
+    // Single world-pixel major and minor grid lines.
+    color += gray333 * grid(xy_world, u_grid_major, width);
+    color += gray111 * grid(xy_world, u_grid_minor, width);
+
+    // Single world-pixel axes lines.
+    color += red   * hairline(xy_world.y, 0., width);
+    color += green * hairline(xy_world.x, 0., width);
 
 	gl_FragColor = vec4(color, 1.0);
 }

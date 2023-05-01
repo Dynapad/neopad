@@ -253,8 +253,8 @@ void run(GLFWwindow *window) {
             .background = (neopad_renderer_background_t) {
                     .color = 0x202020FF,
                     .grid_enabled = true,
-                    .grid_major = 100,
-                    .grid_minor = 25,
+                    .grid_major = 400,
+                    .grid_minor = 100,
             },
     });
 
