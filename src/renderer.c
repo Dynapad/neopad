@@ -134,7 +134,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
-//    bgfx_render_frame(0);
+    bgfx_render_frame(0);
 
     // Initialize BGFX
     bgfx_init_ctor(&this->init);

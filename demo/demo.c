@@ -157,8 +157,6 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
 
         vec2 drag_delta;
         glm_vec2_sub(drag_to, drag_from, drag_delta);
-//        glm_vec2_mul(drag_delta, (vec2){1, -1}, drag_delta);
-        eprintf("∆: %f, %f\n", drag_delta[0], drag_delta[1]);
 
         vec2 camera;
         glm_vec2_add(camera_start, drag_delta, camera);
