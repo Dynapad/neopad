@@ -65,10 +65,8 @@ struct neopad_renderer_s {
     /// Offset. This controls the position of the camera.
     /// @note A value of 0 means the content is centered at (0, 0).
     /// @note In pad-world coordinates.
-    float camera_x;
-    float camera_y;
-    float target_camera_x;
-    float target_camera_y;
+    vec2 camera;
+    vec2 target_camera;
 
     /// Zoom. This controls how much of the content is visible.
     /// @note - A value of 0.5 means the content is displayed at 50%.
@@ -126,8 +124,8 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     this->width = this->target_width = init.width;
     this->height = this->target_height = init.height;
     this->content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
-    this->camera_x = this->target_camera_x = 0.0f;
-    this->camera_y = this->target_camera_y = 0.0f;
+    glm_vec2_zero(this->camera);
+    glm_vec2_zero(this->target_camera);
     this->zoom = this->target_zoom = 1.0f;
 
     this->background = init.background;
@@ -266,13 +264,11 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
 }
 
 void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
-    dst[0] = this->camera_x;
-    dst[1] = this->camera_y;
+    glm_vec2_copy(this->camera, dst);
 }
 
 void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src) {
-    this->target_camera_x = src[0];
-    this->target_camera_y = src[1];
+    glm_vec2_copy(src, this->target_camera);
 }
 
 #pragma mark - Rendering
@@ -284,9 +280,14 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
     }
 
-    if (this->camera_x != this->target_camera_x || this->camera_y != this->target_camera_y) {
-        this->camera_x = this->target_camera_x;
-        this->camera_y = this->target_camera_y;
+    if (!glm_vec2_eqv(this->camera, this->target_camera)) {
+        float smoothness = 50.0f;
+        vec2 delta_camera;
+        vec2 interp_camera;
+        glm_vec2_sub(this->target_camera, this->camera, delta_camera);
+        glm_vec2_scale(delta_camera, 1.0f / smoothness, interp_camera);
+        glm_vec2_add(this->camera, interp_camera, interp_camera);
+        glm_vec2_copy(interp_camera, this->camera);
     }
 
     if (this->zoom != this->target_zoom) {
@@ -299,15 +300,12 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
-
     float width = (float) this->width;
     float height = (float) this->height;
-
-    float scaled_width = (float) this->width / this->content_scale;
-    float scaled_height = (float) this->height / this->content_scale;
-
-    vec3 camera = {this->camera_x, this->camera_y, 0.0f};
     float zoom = this->zoom;
+
+    vec3 camera = {0.0f, 0.0f, 0.0f};
+    glm_vec2_copy(this->camera, camera);
 
     // MATRICES
     // --------
@@ -365,7 +363,7 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
 
     // Display current camera coordinates, zoom, content-scale.
     bgfx_dbg_text_clear(0, false);
-    bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", this->camera_x, this->camera_y);
+    bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", camera[0], camera[1]);
     bgfx_dbg_text_printf(0, 1, 0x0f, "  Zoom: %f", this->zoom);
     bgfx_dbg_text_printf(0, 2, 0x0f, " Scale: %f", this->content_scale);
 
