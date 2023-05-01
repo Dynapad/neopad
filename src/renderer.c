@@ -134,10 +134,13 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
-    bgfx_render_frame(0);
+//    bgfx_render_frame(0);
 
     // Initialize BGFX
     bgfx_init_ctor(&this->init);
+    if (BX_PLATFORM_WINDOWS) {
+        this->init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
+    }
     this->init.resolution.width = init.width;
     this->init.resolution.height = init.height;
     this->init.platformData.nwh = init.native_window_handle;
