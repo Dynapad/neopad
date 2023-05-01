@@ -4,15 +4,22 @@ $input v_color0
 #include "uniforms.sh"
 
 // Single pixel line at x = x0 (or y = y0).
-float hairline(float x, float x0, float width) {
+// @param x: world coordinate
+// @param x0: world coordinate
+// @param width: world-pixel width of a single pixel at the current zoom level
+float pixline(float x, float x0, float width) {
     return step(x0 - width/2.0, x) - step(x0 + width/2.0, x);
 }
 
-// Grid with lines every tick world-pixels.
-float grid(vec2 xy, float tick, float width) {
-    float res = 1. / tick;
-    vec2 grid = fract(xy * res);
-    return max(0, 1. - (step(res, grid.x) * step(res, grid.y)));
+// Single pixel grid SDF.
+// @param xy: world coordinates
+// @param tick: grid spacing in world-pixels
+// @param width: world-pixel width of a single pixel at the current zoom level
+float pixgrid(vec2 xy, float tick, float width) {
+    return max(
+        pixline(xy.x, tick * floor(xy.x / tick), width),
+        pixline(xy.y, tick * floor(xy.y / tick), width)
+    );
 }
 
 #define gray333 vec3_splat(0.2)
@@ -47,12 +54,12 @@ void main()
     float width = max(1.0, ceil(1.0 / u_zoom));
 
     // Single world-pixel major and minor grid lines.
-    color += gray333 * grid(xy_world, u_grid_major, width);
-    color += gray111 * grid(xy_world, u_grid_minor, width);
+    color += gray333 * pixgrid(xy_world, u_grid_major, width);
+    color += gray111 * pixgrid(xy_world, u_grid_minor, width);
 
     // Single world-pixel axes lines.
-    color += red   * hairline(xy_world.y, 0., width);
-    color += green * hairline(xy_world.x, 0., width);
+    color += red   * pixline(xy_world.y, 0., width);
+    color += green * pixline(xy_world.x, 0., width);
 
 	gl_FragColor = vec4(color, 1.0);
 }
