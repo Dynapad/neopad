@@ -203,8 +203,21 @@ GLFWwindow *setup(int width, int height) {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
+    glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 
-    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
+    // If a second monitor is available, use it full-screen.
+    int monitor_count;
+    GLFWmonitor *monitor = NULL;
+    GLFWmonitor **monitors = glfwGetMonitors(&monitor_count);
+
+    if (monitor_count > 1) {
+        monitor = monitors[1];
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+        width = mode->width;
+        height = mode->height;
+    }
+
+    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", monitor, NULL);
     if (!window) {
         eprintf("Error: unable to create window");
         glfwTerminate();
