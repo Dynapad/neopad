@@ -148,7 +148,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
         exit(EXIT_FAILURE);
     }
 
-    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT | BGFX_DEBUG_STATS : 0);
+    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT : 0);
 
     // Initialize vertex layout
     bgfx_vertex_layout_begin(&this->vertex_layout, BGFX_RENDERER_TYPE_NOOP);
@@ -226,7 +226,8 @@ void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 vi
     glm_vec2_copy((vec2) {w[0], w[1]}, world);
 }
 
-void neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+void
+neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
     // Create the transforms we need.
     mat4 viewport_to_ndc;
     mat4 inv_model;
