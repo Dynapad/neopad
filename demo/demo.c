@@ -172,7 +172,7 @@ void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // Limit zoom rate.
     zoom += glm_clamp((float) y_offset, -0.02f, 0.02f);
     // Clamp zoom betsween 0.1 and 2.0.
-    zoom = glm_clamp(zoom, 0.1f, 2.0f);
+    zoom = glm_clamp(zoom, 0.01f, 10.0f);
 
     neopad_renderer_zoom(renderer, zoom);
 }
