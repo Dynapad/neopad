@@ -181,7 +181,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     }
 
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
-        float smoothness = 30.0f;
+        float smoothness = 10.0f;
         vec2 delta_camera;
         vec2 interp_camera;
         glm_vec2_sub(this->target_camera, this->camera, delta_camera);
@@ -191,7 +191,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     }
 
     if (this->zoom != this->target_zoom) {
-        float smoothness = 50.0f;
+        float smoothness = 30.0f;
         float delta_zoom = this->target_zoom - this->zoom;
         float interp_zoom = delta_zoom / smoothness;
         this->zoom = this->zoom + interp_zoom;
