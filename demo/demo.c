@@ -96,8 +96,12 @@ void draw(GLFWwindow *window);
 static neopad_renderer_t renderer = NULL;
 
 #pragma mark - Demo State
-static bool mouse_down = false;
 
+// Zooming
+const float ZOOM_FACTOR = 1.2f;
+
+// Dragging
+static bool mouse_down = false;
 static vec4 viewport = {0, 0, 0, 0};
 static vec2 drag_from = {0, 0};
 static vec2 drag_to = {0, 0};
@@ -193,16 +197,18 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
     }
 }
 
+
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
-//    eprintf("Scroll: %f, %f\n", x_offset, y_offset);
 
-    // todo: enable interpolation of zooming, and handle graceful stopping
-    //       when the user stops scrolls opposite an ongoing interpolation.
+    // Update the zoom, applying a logarithmic function to prevent extremely fast
+    // zooming when zoomed out substantially.
 
-    // Limit zoom rate.
-    zoom += glm_clamp((float) y_offset, -0.02f, 0.02f);
+    // Adjust the zoom level logarithmically.
+    if (y_offset > 0) zoom *= powf(ZOOM_FACTOR, (float) y_offset);
+    else if (y_offset < 0) zoom /= powf(ZOOM_FACTOR, (float) -y_offset);
+
     // Clamp zoom betwixt 0.1 and 2.0.
-    zoom = glm_clamp(zoom, 0.01f, 10.0f);
+    zoom = glm_clamp(zoom, 0.1f, 10.0f);
 
     neopad_renderer_zoom(renderer, zoom);
 }
