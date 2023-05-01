@@ -138,7 +138,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
             mouse_down = true;
             get_cursor_pos(window, drag_from);
             get_viewport(window, viewport);
-            neopad_renderer_screen2world(renderer, viewport, drag_from, drag_from);
+            neopad_renderer_window_to_screen(renderer, viewport, drag_from, drag_from);
 
             // Save the starting camera position.
             neopad_renderer_get_camera(renderer, camera_start);
@@ -151,11 +151,13 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 void cursor_position_callback(GLFWwindow *window, double x, double y) {
     if (mouse_down) {
         get_cursor_pos(window, drag_to);
+
         get_viewport(window, viewport);
-        neopad_renderer_screen2world(renderer, viewport, drag_to, drag_to);
+        neopad_renderer_window_to_screen(renderer, viewport, drag_to, drag_to);
 
         vec2 drag_delta;
         glm_vec2_sub(drag_to, drag_from, drag_delta);
+//        glm_vec2_mul(drag_delta, (vec2){1, -1}, drag_delta);
         eprintf("∆: %f, %f\n", drag_delta[0], drag_delta[1]);
 
         vec2 camera;

@@ -148,7 +148,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
         exit(EXIT_FAILURE);
     }
 
-    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT : 0);
+    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT | BGFX_DEBUG_STATS : 0);
 
     // Initialize vertex layout
     bgfx_vertex_layout_begin(&this->vertex_layout, BGFX_RENDERER_TYPE_NOOP);
@@ -206,7 +206,7 @@ void neopad_renderer_destroy(neopad_renderer_t this) {
 
 #pragma mark - Coordinate Transformations
 
-void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
     // Create the transforms we need.
     mat4 viewport_to_ndc;
     mat4 inv_model_view;
@@ -219,28 +219,29 @@ void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewp
     vec4 v = {window[0], window[1], 0.0f, 1.0f};
     vec4 w;
 
-    eprintf("\n");
-    // Print the model_view matrix and its inverse.
-    eprintf("model:\n");
-    for (int i = 0; i < 4; i++) {
-        eprintf("    %f, %f, %f, %f\n", this->model[i][0], this->model[i][1], this->model[i][2], this->model[i][3]);
-    }
-    eprintf("model_view:\n");
-    for (int i = 0; i < 4; i++) {
-        eprintf("    %f, %f, %f, %f\n", this->model_view[i][0], this->model_view[i][1], this->model_view[i][2], this->model_view[i][3]);
-    }
-    eprintf("inv_model_view:\n");
-    for (int i = 0; i < 4; i++) {
-        eprintf("    %f, %f, %f, %f\n", inv_model_view[i][0], inv_model_view[i][1], inv_model_view[i][2], inv_model_view[i][3]);
-    }
-
-    eprintf("          v: %f, %f, %f, %f\n", v[0], v[1], v[2], v[3]);
     glm_mat4_mulv(viewport_to_ndc, v, w);
-    eprintf("     ndc(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
     glm_mat4_mulv(inv_proj, w, w);
-    eprintf("inv_proj(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
     glm_mat4_mulv(inv_model_view, w, w);
-    eprintf("  inv_mv(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
+
+    glm_vec2_copy((vec2) {w[0], w[1]}, world);
+}
+
+void neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+    // Create the transforms we need.
+    mat4 viewport_to_ndc;
+    mat4 inv_model;
+    mat4 inv_proj;
+    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], 0.0f, 1.0f, viewport_to_ndc);
+
+    glm_mat4_inv(this->model, inv_model);
+    glm_mat4_inv(this->proj, inv_proj);
+
+    vec4 v = {window[0], window[1], 0.0f, 1.0f};
+    vec4 w;
+
+    glm_mat4_mulv(viewport_to_ndc, v, w);
+    glm_mat4_mulv(inv_proj, w, w);
+    glm_mat4_mulv(inv_model, w, w);
 
     glm_vec2_copy((vec2) {w[0], w[1]}, world);
 }
@@ -261,8 +262,6 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
 }
 
 void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
-    assert (this->camera_x == this->target_camera_x);
-    assert (this->camera_y == this->target_camera_y);
     dst[0] = this->camera_x;
     dst[1] = this->camera_y;
 }
@@ -387,11 +386,6 @@ void neopad_renderer_draw_background(neopad_renderer_t this) {
     float r = 1.0f;
     float t = -1.0f;
     float b = 1.0f;
-
-    mat2 ndx_rect = {
-            {l, t},
-            {r, b},
-    };
 
     neopad_renderer_vertex_t vertices[] = {
             {l, t, 0.0f, 0x00000000},

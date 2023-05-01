@@ -72,11 +72,20 @@ void neopad_renderer_destroy(neopad_renderer_t this);
 
 #pragma mark - Coordinate Transformations
 
-/// Convert a point from screen coordinates to world coordinates.
-/// @param viewport The viewport of the renderer (left, top, right, bottom).
-/// @param p The input point in screen coordinates.
+/// Convert a point from window coordinates to world coordinates.
+/// @param viewport The viewport of the window (left, top, right, bottom).
+/// @param p The input point in window coordinates.
 /// @param q The output point in world coordinates.
-void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
+void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
+
+/// Convert a point from screen coordinates to world coordinates.
+/// @note This differs from the window-to-world transformation in that it takes the camera position into account.
+///       This is important for the camera controls, where we want to avoid a feedback loop.
+/// @param viewport The viewport of the renderer (left, top, right, bottom).
+/// @param p The input point in window coordinates.
+/// @param q The output point in screen coordinates.
+void neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
+
 
 #pragma mark - Manipulation
 
