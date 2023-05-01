@@ -11,6 +11,7 @@
 #include <cglm/cam.h>
 
 #include <memory.h>
+#include <assert.h>
 
 #define PROGRAM_BASIC 0
 #define PROGRAM_BACKGROUND 1
@@ -32,12 +33,12 @@ typedef struct neopad_vertex_s {
 /// Structure matching defines in shaders/uniforms.sh
 typedef struct neopad_uniforms_s {
     float time;
-    float content_scale;
-    float zoom;
-    float _unused;
+    float _unused0;
+    float _unused1;
+    float _unused2;
 
-    float offset_x;
-    float offset_y;
+    float _unused3;
+    float _unused4;
     float grid_major;
     float grid_minor;
 } neopad_renderer_uniforms_t;
@@ -60,7 +61,6 @@ struct neopad_renderer_s {
     /// @note A value of 1 means no scaling.
     /// @note A value of 2 means a 2:1 ratio from logical pixel size to display pixel size (hi-dpi).
     float content_scale;
-    float target_content_scale;
 
     /// Offset. This controls the position of the camera.
     /// @note A value of 0 means the content is centered at (0, 0).
@@ -125,9 +125,9 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Populate ourselves
     this->width = this->target_width = init.width;
     this->height = this->target_height = init.height;
+    this->content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
     this->camera_x = this->target_camera_x = 0.0f;
     this->camera_y = this->target_camera_y = 0.0f;
-    this->content_scale = this->target_content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
     this->zoom = this->target_zoom = 1.0f;
 
     this->background = init.background;
@@ -175,10 +175,6 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Initialize uniforms
     this->uniforms = (neopad_renderer_uniforms_t) {
             .time = 0.0f,
-            .content_scale = this->content_scale,
-            .zoom = this->zoom,
-            .offset_x = this->camera_x,
-            .offset_y = this->camera_y,
             .grid_major = this->background.grid_major,
             .grid_minor = this->background.grid_minor
     };
@@ -215,17 +211,36 @@ void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewp
     mat4 viewport_to_ndc;
     mat4 inv_model_view;
     mat4 inv_proj;
-    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
+    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], 0.0f, 1.0f, viewport_to_ndc);
 
-    glm_mat4_inv(this->view, inv_model_view);
+    glm_mat4_inv(this->model_view, inv_model_view);
     glm_mat4_inv(this->proj, inv_proj);
 
     vec4 v = {window[0], window[1], 0.0f, 1.0f};
     vec4 w;
 
+    eprintf("\n");
+    // Print the model_view matrix and its inverse.
+    eprintf("model:\n");
+    for (int i = 0; i < 4; i++) {
+        eprintf("    %f, %f, %f, %f\n", this->model[i][0], this->model[i][1], this->model[i][2], this->model[i][3]);
+    }
+    eprintf("model_view:\n");
+    for (int i = 0; i < 4; i++) {
+        eprintf("    %f, %f, %f, %f\n", this->model_view[i][0], this->model_view[i][1], this->model_view[i][2], this->model_view[i][3]);
+    }
+    eprintf("inv_model_view:\n");
+    for (int i = 0; i < 4; i++) {
+        eprintf("    %f, %f, %f, %f\n", inv_model_view[i][0], inv_model_view[i][1], inv_model_view[i][2], inv_model_view[i][3]);
+    }
+
+    eprintf("          v: %f, %f, %f, %f\n", v[0], v[1], v[2], v[3]);
     glm_mat4_mulv(viewport_to_ndc, v, w);
+    eprintf("     ndc(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
     glm_mat4_mulv(inv_proj, w, w);
+    eprintf("inv_proj(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
     glm_mat4_mulv(inv_model_view, w, w);
+    eprintf("  inv_mv(w): %f, %f, %f, %f\n", w[0], w[1], w[2], w[3]);
 
     glm_vec2_copy((vec2) {w[0], w[1]}, world);
 }
@@ -238,7 +253,7 @@ void neopad_renderer_resize(neopad_renderer_t this, int width, int height) {
 }
 
 void neopad_renderer_rescale(neopad_renderer_t this, float content_scale) {
-    this->target_content_scale = content_scale;
+    this->content_scale = content_scale;
 }
 
 void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
@@ -246,8 +261,10 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
 }
 
 void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
-    dst[0] = this->target_camera_x;
-    dst[1] = this->target_camera_y;
+    assert (this->camera_x == this->target_camera_x);
+    assert (this->camera_y == this->target_camera_y);
+    dst[0] = this->camera_x;
+    dst[1] = this->camera_y;
 }
 
 void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src) {
@@ -261,23 +278,16 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
         this->height = this->target_height;
-        bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
+        bgfx_reset(this->width, this->height, 0, this->init.resolution.format);
     }
 
     if (this->camera_x != this->target_camera_x || this->camera_y != this->target_camera_y) {
-        this->uniforms.offset_x = this->camera_x = this->target_camera_x;
-        this->uniforms.offset_y = this->camera_y = this->target_camera_y;
-        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
-    }
-
-    if (this->content_scale != this->target_content_scale) {
-        this->uniforms.content_scale = this->content_scale = this->target_content_scale;
-        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+        this->camera_x = this->target_camera_x;
+        this->camera_y = this->target_camera_y;
     }
 
     if (this->zoom != this->target_zoom) {
-        this->uniforms.zoom = this->zoom = this->target_zoom;
-        bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+        this->zoom = this->target_zoom;
     }
 }
 

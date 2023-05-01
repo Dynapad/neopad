@@ -111,13 +111,13 @@ static float zoom = 1;
 void get_cursor_pos(GLFWwindow *window, vec2 dest) {
     double x, y;
     glfwGetCursorPos(window, &x, &y);
-    dest[0] = (float)x, dest[1] = (float)y;
+    dest[0] = (float) x, dest[1] = (float) y;
 }
 
 void get_viewport(GLFWwindow *window, vec4 dest) {
     int w, h;
     glfwGetWindowSize(window, &w, &h);
-    dest[0] = 0, dest[1] = 0, dest[2] = (float)w, dest[3] = (float)h;
+    dest[0] = 0, dest[1] = 0, dest[2] = (float) w, dest[3] = (float) h;
 }
 
 #pragma mark - GLFW Callbacks
@@ -156,9 +156,9 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
 
         vec2 drag_delta;
         glm_vec2_sub(drag_to, drag_from, drag_delta);
+        eprintf("∆: %f, %f\n", drag_delta[0], drag_delta[1]);
 
         vec2 camera;
-        neopad_renderer_get_camera(renderer, camera);
         glm_vec2_add(camera_start, drag_delta, camera);
         neopad_renderer_set_camera(renderer, camera);
     }
