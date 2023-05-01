@@ -97,6 +97,11 @@ static neopad_renderer_t renderer = NULL;
 
 #pragma mark - Demo State
 
+// Full Screen
+static bool fullscreen = false;
+static int saved_width = 0;
+static int saved_height = 0;
+
 // Zooming
 const float ZOOM_FACTOR = 1.2f;
 
@@ -147,6 +152,21 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             case GLFW_KEY_C:
                 if (emacs_exit == 1 && mods & GLFW_MOD_CONTROL) {
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
+                break;
+            case GLFW_KEY_F:
+                // Toggle fullscreen mode.
+                if (fullscreen) {
+                    neopad_renderer_resize(renderer, saved_width, saved_height);
+                    glfwSetWindowMonitor(window, NULL, 0, 0, saved_width, saved_height, GLFW_DONT_CARE);
+                    fullscreen = false;
+                } else {
+                    glfwGetWindowSize(window, &saved_width, &saved_width);
+                    GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+                    const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+                    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+                    neopad_renderer_resize(renderer, mode->width, mode->height);
+                    fullscreen = true;
                 }
                 break;
             case GLFW_KEY_Q:
@@ -243,20 +263,7 @@ GLFWwindow *setup(int width, int height) {
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 
-    // If a second monitor is available, use it full-screen.
-    int monitor_count;
-    GLFWmonitor *monitor = NULL;
-    GLFWmonitor **monitors = glfwGetMonitors(&monitor_count);
-
-    // Disabled for now.
-    if (monitor_count > 1) {
-        monitor = monitors[1];
-        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        width = mode->width;
-        height = mode->height;
-    }
-
-    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", monitor, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
     if (!window) {
         eprintf("Error: unable to create window");
         glfwTerminate();
