@@ -2,6 +2,12 @@
 
 A modern C17 rewrite of Pad++.
 
+---
+
+![Screen recording of early demo](./etc/screens/demo-2023-05-01.gif)
+
+---
+
 See below for:
 
   - [Get Started](#get-started)

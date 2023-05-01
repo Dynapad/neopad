@@ -243,7 +243,7 @@ GLFWwindow *setup(int width, int height) {
     GLFWmonitor **monitors = glfwGetMonitors(&monitor_count);
 
     // Disabled for now.
-    if (FALSE && monitor_count > 1) {
+    if (monitor_count > 1) {
         monitor = monitors[1];
         const GLFWvidmode *mode = glfwGetVideoMode(monitor);
         width = mode->width;
