@@ -15,6 +15,11 @@
 /// @note This is an opaque type.
 typedef struct neopad_renderer_s *neopad_renderer_t;
 
+/// A constant renderer.
+/// @note For now this is more of a hint than a guarantee.
+/// @todo Make this actually const. Currently blocked by cglm's lack of const qualifiers.
+typedef /*const*/ struct neopad_renderer_s *neopad_renderer_const_t;
+
 typedef struct neopad_renderer_background_s {
     uint32_t color;
 
@@ -68,8 +73,10 @@ void neopad_renderer_destroy(neopad_renderer_t this);
 #pragma mark - Coordinate Transformations
 
 /// Convert a point from screen coordinates to world coordinates.
-/// @note This is specific to GLFWs window coordinate system.
-void neopad_renderer_glfw2world(neopad_renderer_t this, const vec2 glfw, vec2 world);
+/// @param viewport The viewport of the renderer (left, top, right, bottom).
+/// @param p The input point in screen coordinates.
+/// @param q The output point in world coordinates.
+void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
 
 #pragma mark - Manipulation
 
@@ -86,12 +93,14 @@ void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 void neopad_renderer_zoom(neopad_renderer_t this, float zoom);
 
 /// Reposition the viewport of the renderer.
+/// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
-void neopad_renderer_get_camera(neopad_renderer_t this, float *camera_x, float *camera_y);
+void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dest);
 
 /// Reposition the viewport of the renderer.
+/// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
-void neopad_renderer_set_camera(neopad_renderer_t this, float camera_x, float camera_y);
+void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src);
 
 #pragma mark - Frame
 
@@ -106,6 +115,7 @@ void neopad_renderer_end_frame(neopad_renderer_t this);
 #pragma mark - Drawing
 
 void neopad_renderer_draw_background(neopad_renderer_t this);
+
 void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, float r, float b);
 
 #pragma mark - Line Drawing

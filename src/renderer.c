@@ -148,7 +148,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
         exit(EXIT_FAILURE);
     }
 
-    bgfx_set_debug(init.debug ? BGFX_DEBUG_STATS : 0);
+    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT : 0);
 
     // Initialize vertex layout
     bgfx_vertex_layout_begin(&this->vertex_layout, BGFX_RENDERER_TYPE_NOOP);
@@ -210,36 +210,24 @@ void neopad_renderer_destroy(neopad_renderer_t this) {
 
 #pragma mark - Coordinate Transformations
 
-void neopad_renderer_glfw2world(neopad_renderer_t this, const vec2 glfw, vec2 world) {
-//    eprintf("Window coord: %f, %f\n", p[0], p[1]);
+void neopad_renderer_screen2world(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+    // Create the transforms we need.
+    mat4 viewport_to_ndc;
+    mat4 inv_model_view;
+    mat4 inv_proj;
+    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
 
-    // GLFW's coordinate system is:
-    // - (0, 0) is the top-left corner
-    // - (width, height) is the bottom-right corner (in _display_ pixels)
-    vec4 v = {glfw[0], glfw[1], 0.0f, 1.0f};
+    glm_mat4_inv(this->view, inv_model_view);
+    glm_mat4_inv(this->proj, inv_proj);
 
-    // Re-center
-    glm_vec4_sub(v, (vec4) {
-            (float) this->width / 2 / this->content_scale,
-            (float) this->height / 2 / this->content_scale,
-            0.0f, 0.0f
-    }, v);
+    vec4 v = {window[0], window[1], 0.0f, 1.0f};
+    vec4 w;
 
-    // Invert Y axis (glfw's Y axis is inverted relative to GL)
-    glm_vec4_mul(v, (vec4) {1, -1, 1, 1}, v);
+    glm_mat4_mulv(viewport_to_ndc, v, w);
+    glm_mat4_mulv(inv_proj, w, w);
+    glm_mat4_mulv(inv_model_view, w, w);
 
-//    eprintf("Camera coord: %f, %f\n", v[0], v[1]);
-
-    // Apply the camera to get unzoomed world coordinates...
-    mat4 inv_view;
-    glm_mat4_inv(this->view, inv_view);
-    glm_mat4_mulv(inv_view, v, v);
-
-    // And apply the zoom (we don't want the entire proj matrix)
-    glm_vec4_scale(v, 1.0f / this->zoom, v);
-//    eprintf("World coord: %f, %f\n", v[0], v[1]);
-
-    glm_vec2_copy((vec2) {v[0], v[1]}, world);
+    glm_vec2_copy((vec2) {w[0], w[1]}, world);
 }
 
 #pragma mark - Manipualtion
@@ -257,16 +245,14 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
     this->target_zoom = zoom;
 }
 
-void neopad_renderer_get_camera(neopad_renderer_t this, float *camera_x, float *camera_y) {
-    *camera_x = this->target_camera_x;
-    *camera_y = this->target_camera_y;
-    eprintf("Getting camera: %f, %f\n", *camera_x, *camera_y);
+void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
+    dst[0] = this->target_camera_x;
+    dst[1] = this->target_camera_y;
 }
 
-void neopad_renderer_set_camera(neopad_renderer_t this, float camera_x, float camera_y) {
-    eprintf("Setting camera to: %f, %f\n", camera_x, camera_y);
-    this->target_camera_x = camera_x;
-    this->target_camera_y = camera_y;
+void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src) {
+    this->target_camera_x = src[0];
+    this->target_camera_y = src[1];
 }
 
 #pragma mark - Rendering
@@ -356,6 +342,15 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     bgfx_set_view_transform(VIEW_CONTENT, this->model_view, this->proj);
     bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
     bgfx_touch(VIEW_CONTENT);
+
+    // DEBUG
+    // -----
+
+    // Display current camera coordinates, zoom, content-scale.
+    bgfx_dbg_text_clear(0, false);
+    bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", this->camera_x, this->camera_y);
+    bgfx_dbg_text_printf(0, 1, 0x0f, "  Zoom: %f", this->zoom);
+    bgfx_dbg_text_printf(0, 2, 0x0f, " Scale: %f", this->content_scale);
 
     bgfx_frame(false);
 }
