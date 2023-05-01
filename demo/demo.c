@@ -301,8 +301,7 @@ void run(GLFWwindow *window) {
     glfwGetFramebufferSize(window, &width, &height);
     glfwGetWindowContentScale(window, &scale, NULL);
 
-    renderer = neopad_renderer_create();
-    neopad_renderer_init(renderer, (neopad_renderer_init_t) {
+    neopad_renderer_init_t init = {
             .width = width,
             .height = height,
             .content_scale = scale,
@@ -314,8 +313,11 @@ void run(GLFWwindow *window) {
                     .grid_enabled = true,
                     .grid_major = 400,
                     .grid_minor = 100,
-            },
-    });
+            }
+    };
+
+    renderer = neopad_renderer_create();
+    neopad_renderer_setup(renderer, init);
 
     while (!glfwWindowShouldClose(window)) {
         // Poll for events and check if the window resized.
@@ -323,6 +325,7 @@ void run(GLFWwindow *window) {
         draw(window);
     }
 
+    neopad_renderer_teardown(renderer);
     neopad_renderer_destroy(renderer);
 }
 

@@ -56,8 +56,6 @@ typedef struct neopad_renderer_init_s {
 
     /// The background settings.
     neopad_renderer_background_t background;
-
-
 } neopad_renderer_init_t;
 
 #pragma mark - Lifecycle
@@ -65,9 +63,11 @@ typedef struct neopad_renderer_init_s {
 /// Create a renderer.
 neopad_renderer_t neopad_renderer_create();
 
-/// Initialize a renderer.
-/// \param init The initialization parameters.
-void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init);
+/// Setup renderer resources.
+void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init);
+
+/// Teardown renderer resources.
+void neopad_renderer_teardown(neopad_renderer_t this);
 
 /// Destroy a renderer.
 void neopad_renderer_destroy(neopad_renderer_t this);
@@ -111,7 +111,7 @@ void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dest);
 /// Reposition the viewport of the renderer.
 /// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
-void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src);
+void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src);
 
 #pragma mark - Frame
 

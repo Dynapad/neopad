@@ -16,6 +16,7 @@ add_shaders_directory("${CMAKE_CURRENT_SOURCE_DIR}/shaders" SHADERS_TARGET_NAME)
 
 # We need this directory, and users of our library will need it too.
 target_include_directories(neopad PUBLIC ../include)
+target_include_directories(neopad PRIVATE include)
 
 # All users of this library will need at least C11.
 target_compile_features(neopad PUBLIC c_std_11)

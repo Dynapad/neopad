@@ -1,12 +1,22 @@
 //
 // Created by Dylan Lukes on 5/1/23.
 //
+// This is the internal header for the renderer core. Implementation files can include this
+// header to access the contents of the renderer opaque pointer type. It should not be
+// exposed in the public API.
 
 #ifndef NEOPAD_RENDERER_INTERNAL_H
 #define NEOPAD_RENDERER_INTERNAL_H
 
-#include "../util/bgfx/embedded_shader.h"
+#include <cglm/vec2.h>
+
+#include "../../../util/bgfx/embedded_shader.h"
 #include "generated/shaders/src/all.h"
+
+#include "neopad/renderer.h"
+#include "neopad/internal/renderer/module.h"
+
+// todo: these defines could collide?
 
 #define PROGRAM_BASIC 0
 #define PROGRAM_BACKGROUND 1
@@ -14,6 +24,8 @@
 
 #define VIEW_BACKGROUND 0
 #define VIEW_CONTENT 1
+
+#define MODULE_COUNT 1
 
 /// @note This is a pad-world coordinate.
 /// @note At zoom 1.0, these coordinates map to logical pixels.
@@ -39,8 +51,11 @@ typedef struct neopad_uniforms_s {
 } neopad_renderer_uniforms_t;
 
 struct neopad_renderer_s {
+    /// Our own initialization parameters.
+    neopad_renderer_init_t init;
+
     /// BGFX initialization parameters.
-    bgfx_init_t init;
+    bgfx_init_t bgfx_init;
 
     /// Back-buffer resolution.
     /// @note For high-DPI displays, this is the resolution before scaling down.
@@ -78,9 +93,6 @@ struct neopad_renderer_s {
     mat4 model_view;
     mat4 proj;
 
-    /// Background settings.
-    neopad_renderer_background_t background;
-
     /// Vertex layout(s).
     bgfx_vertex_layout_t vertex_layout;
 
@@ -91,9 +103,9 @@ struct neopad_renderer_s {
     neopad_renderer_uniforms_t uniforms;
     bgfx_uniform_handle_t uniform_handle;
 
-    // TODO: remove
-    bgfx_dynamic_vertex_buffer_handle_t vertex_buffer;
-    bgfx_dynamic_index_buffer_handle_t index_buffer;
+    /// Modules
+    /// @todo Fix this (temporary hack)
+    neopad_renderer_module_t modules[NEOPAD_RENDERER_MODULE_COUNT];
 };
 
 

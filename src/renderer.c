@@ -2,10 +2,11 @@
 // Created by Dylan Lukes on 4/28/23.
 //
 #include "neopad/renderer.h"
-#include "internal/renderer.h"
-#include "internal/log.h"
+#include "neopad/internal/renderer.h"
+#include "neopad/internal/log.h"
 
 #include "cglm/affine.h"
+#include "neopad/internal/renderer/background.h"
 #include <cglm/cam.h>
 
 #include <memory.h>
@@ -16,40 +17,44 @@
 neopad_renderer_t neopad_renderer_create() {
     neopad_renderer_t renderer = malloc(sizeof(struct neopad_renderer_s));
     memset(renderer, 0, sizeof(struct neopad_renderer_s));
+
     return renderer;
 }
 
-void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
+void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) {
+    this->init = init;
+
     // Populate ourselves
-    this->width = this->target_width = init.width;
-    this->height = this->target_height = init.height;
-    this->content_scale = init.content_scale > 0 ? init.content_scale : 1.0f;
+    this->width = this->target_width = this->init.width;
+    this->height = this->target_height = this->init.height;
+    this->content_scale = this->init.content_scale > 0 ? this->init.content_scale : 1.0f;
     glm_vec2_zero(this->camera);
     glm_vec2_zero(this->target_camera);
     this->zoom = this->target_zoom = 1.0f;
 
-    this->background = init.background;
+    // Populate modules
+    this->modules[0] = (neopad_renderer_module_t) { .background = neopad_renderer_module_background };
 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
     bgfx_render_frame(0);
 
     // Initialize BGFX
-    bgfx_init_ctor(&this->init);
+    bgfx_init_ctor(&this->bgfx_init);
     if (BX_PLATFORM_WINDOWS) {
-        this->init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
+        this->bgfx_init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
     }
-    this->init.resolution.width = init.width;
-    this->init.resolution.height = init.height;
-    this->init.platformData.nwh = init.native_window_handle;
-    this->init.platformData.ndt = init.native_display_type;
+    this->bgfx_init.resolution.width = this->init.width;
+    this->bgfx_init.resolution.height = this->init.height;
+    this->bgfx_init.platformData.nwh = this->init.native_window_handle;
+    this->bgfx_init.platformData.ndt = this->init.native_display_type;
 
-    if (!bgfx_init(&this->init)) {
+    if (!bgfx_init(&this->bgfx_init)) {
         eprintf("Failed to initialize BGFX.\n");
         exit(EXIT_FAILURE);
     }
 
-    bgfx_set_debug(init.debug ? BGFX_DEBUG_TEXT : 0);
+    bgfx_set_debug(this->init.debug ? BGFX_DEBUG_TEXT : 0);
 
     // Initialize vertex layout
     bgfx_vertex_layout_begin(&this->vertex_layout, BGFX_RENDERER_TYPE_NOOP);
@@ -76,32 +81,35 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     // Initialize uniforms
     this->uniforms = (neopad_renderer_uniforms_t) {
             .time = 0.0f,
-            .zoom = this->zoom,
-            .grid_major = this->background.grid_major,
-            .grid_minor = this->background.grid_minor
+            .zoom = this->zoom
     };
     this->uniform_handle = bgfx_create_uniform("u_params", BGFX_UNIFORM_TYPE_VEC4, 2);
 
-    // TODO: REMOVE THIS TEST STUFF
-    // Initialize test vertex buffer
-    this->vertex_buffer = bgfx_create_dynamic_vertex_buffer(
-            4,
-            &this->vertex_layout,
-            BGFX_BUFFER_NONE);
-
-    // Initialize test index buffer
-    this->index_buffer = bgfx_create_dynamic_index_buffer(
-            6,
-            BGFX_BUFFER_NONE);
+    // Per-module setup
+    for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
+        neopad_renderer_module_t mod = this->modules[i];
+        if (mod.base->on_setup) {
+            mod.base->on_setup(mod, this);
+        }
+    }
 }
 
-void neopad_renderer_destroy(neopad_renderer_t this) {
-    bgfx_destroy_dynamic_index_buffer(this->index_buffer);
-    bgfx_destroy_dynamic_vertex_buffer(this->vertex_buffer);
+void neopad_renderer_teardown(neopad_renderer_t this) {
+    // Per-module teardown, in reverse setup order.
+    for (int i = NEOPAD_RENDERER_MODULE_COUNT - 1; i >= 0; i--) {
+        neopad_renderer_module_t mod = this->modules[i];
+        if (mod.base->on_teardown) {
+            mod.base->on_teardown(mod, this);
+        }
+    }
+
     bgfx_destroy_uniform(this->uniform_handle);
     bgfx_destroy_program(this->programs[PROGRAM_BACKGROUND]);
     bgfx_destroy_program(this->programs[PROGRAM_BASIC]);
     bgfx_shutdown();
+}
+
+void neopad_renderer_destroy(neopad_renderer_t this) {
     free(this);
 }
 
@@ -167,7 +175,7 @@ void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
     glm_vec2_copy(this->camera, dst);
 }
 
-void neopad_renderer_set_camera(neopad_renderer_t this, const vec2 src) {
+void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src) {
     glm_vec2_copy(src, this->target_camera);
 }
 
@@ -177,7 +185,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
         this->height = this->target_height;
-        bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->init.resolution.format);
+        bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->bgfx_init.resolution.format);
     }
 
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
@@ -200,6 +208,14 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
 
     // Update any uniforms that have changed (or really, just all of them).
     bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
+
+    // Per-module begin frame.
+    for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
+        neopad_renderer_module_t mod = this->modules[i];
+        if (mod.base->on_begin_frame) {
+            mod.base->on_begin_frame(mod, this);
+        }
+    }
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
@@ -239,20 +255,12 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     float t = height / 2.0f;
     glm_ortho(l / zoom, r / zoom, b / zoom, t / zoom, -1.0f, 1.0f, this->proj);
 
-    // BACKGROUND
-    // ----------
-    // The background uses the same view and projection matrices as the content, but
-    // it does not apply them the same way. The background is always drawn at the same
-    // size, regardless of the content scale or zoom. It renders geometry provided in
-    // clip-space coordinates. It needs the same view and projection matrices so it can
-    // invert them and use them to transform the clip-space coordinates into world-space
-    // coordinates. This allows the background to be drawn in the same world-space as the
-    // content, but at a fixed size.
-
-    bgfx_set_view_clear(VIEW_BACKGROUND, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
-    bgfx_set_view_transform(VIEW_BACKGROUND, this->model_view, this->proj);
-    bgfx_set_view_rect(VIEW_BACKGROUND, 0, 0, this->width, this->height);
-    bgfx_touch(VIEW_BACKGROUND);
+    for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
+        neopad_renderer_module_t mod = this->modules[i];
+        if (mod.base->on_end_frame) {
+            mod.base->on_end_frame(mod, this);
+        }
+    }
 
     // CONTENT
     // -------
@@ -276,46 +284,8 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
 #pragma mark - Drawing
 
 void neopad_renderer_draw_background(neopad_renderer_t this) {
-    if (!this->background.grid_enabled) {
-        return;
-    }
-
-    bgfx_transient_vertex_buffer_t tvb;
-    bgfx_transient_index_buffer_t tib;
-
-    bgfx_alloc_transient_vertex_buffer(&tvb, 4, &this->vertex_layout);
-    bgfx_alloc_transient_index_buffer(&tib, 6, false);
-
-    // NDC full quad.
-    float l = -1.0f;
-    float r = 1.0f;
-    float t = -1.0f;
-    float b = 1.0f;
-
-    neopad_renderer_vertex_t vertices[] = {
-            {l, t, 0.0f, 0x00000000},
-            {r, t, 0.0f, 0x00000000},
-            {r, b, 0.0f, 0x00000000},
-            {l, b, 0.0f, 0x00000000},
-    };
-    memcpy(tvb.data, vertices, sizeof(vertices));
-
-    uint16_t indices[] = {
-            0, 1, 2,
-            0, 2, 3,
-    };
-    memcpy(tib.data, indices, sizeof(indices));
-
-    bgfx_set_transient_vertex_buffer(0, &tvb, 0, 4);
-    bgfx_set_transient_index_buffer(&tib, 0, 6);
-    bgfx_set_view_clear(VIEW_BACKGROUND, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->background.color, 1.0f, 0);
-
-    bgfx_set_state(BGFX_STATE_WRITE_RGB
-                   | BGFX_STATE_WRITE_A
-                   | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_DST_ALPHA)
-                   | BGFX_STATE_BLEND_EQUATION_SEPARATE(BGFX_STATE_BLEND_EQUATION_ADD, BGFX_STATE_BLEND_EQUATION_MAX),
-                   0);
-    bgfx_submit(VIEW_BACKGROUND, this->programs[PROGRAM_BACKGROUND], 0, false);
+    neopad_renderer_module_t mod = this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND];
+    mod.base->render(mod, this);
 }
 
 #pragma mark - Testing
