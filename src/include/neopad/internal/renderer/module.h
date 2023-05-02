@@ -32,13 +32,24 @@ typedef struct neopad_renderer_module_base_s {
     /// View ID (pass/layer) for this module.
     bgfx_view_id_t view_id;
 
-    /// Module hooks
+    /// Called once when the renderer is initialized.
+    /// @note This is where you should initialize any resources.
     void (*on_setup)(neopad_renderer_module_t module, neopad_renderer_t renderer);
+
+    /// Called once when the renderer is destroyed.
+    /// @note This is where you should destroy any resources.
     void (*on_teardown)(neopad_renderer_module_t module, neopad_renderer_t renderer);
+
+    /// Called once at the beginning of each frame. This is where you should update renderer uniforms.
+    /// @note At this point, the model, view, and projection matrices have *not* been set up.
     void (*on_begin_frame)(neopad_renderer_module_t module, neopad_renderer_t renderer);
+
+    /// Called once at the end of each frame, right *before* bgfx_frame is called.
+    /// @note At this point, the model, view, and projection matrices have been set up.
+    ///       This is where you should set the view transforms and rect.
     void (*on_end_frame)(neopad_renderer_module_t module, neopad_renderer_t renderer);
 
-    /// Render
+    /// Called once per frame. This is where you should render your module.
     void (*render)(neopad_renderer_module_t module, neopad_renderer_t renderer);
 
     /// Destructor

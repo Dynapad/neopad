@@ -16,7 +16,6 @@
 neopad_renderer_t neopad_renderer_create() {
     neopad_renderer_t renderer = malloc(sizeof(struct neopad_renderer_s));
     memset(renderer, 0, sizeof(struct neopad_renderer_s));
-
     return renderer;
 }
 
@@ -32,7 +31,7 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     this->zoom = this->target_zoom = 1.0f;
 
     // Populate modules
-    this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create();
+    this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create(VIEW_BACKGROUND);
     this->modules[NEOPAD_RENDERER_MODULE_VECTOR] = neopad_renderer_module_vector_create();
 
     // Switch to single-threaded mode for simplicity...
@@ -62,7 +61,7 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     bgfx_vertex_layout_add(&this->vertex_layout, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8, true, false);
     bgfx_vertex_layout_end(&this->vertex_layout);
 
-    // Initialize programs
+    // Initialize basic program (others handled in modules)
     bgfx_renderer_type_t renderer_type = bgfx_get_renderer_type();
     this->programs[PROGRAM_BASIC] = bgfx_create_embedded_program(
             embedded_shaders,
@@ -71,14 +70,7 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
             "fs_basic",
             NULL);
 
-    this->programs[PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
-            embedded_shaders,
-            renderer_type,
-            "vs_grid",
-            "fs_grid",
-            NULL);
-
-    // Initialize uniforms
+    // Initialize uniforms (others handled in modules)
     this->uniforms = (neopad_renderer_uniforms_t) {
             .time = 0.0f,
             .zoom = this->zoom
@@ -213,9 +205,6 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         this->uniforms.zoom = this->zoom;
     }
 
-    // Update any uniforms that have changed (or really, just all of them).
-    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
-
     // Per-module begin frame.
     for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
         neopad_renderer_module_t mod = this->modules[i];
@@ -223,6 +212,9 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
             mod.base->on_begin_frame(mod, this);
         }
     }
+
+    // Update any uniforms that have changed (or really, just all of them).
+    bgfx_set_uniform(this->uniform_handle, &this->uniforms, 2);
 }
 
 void neopad_renderer_end_frame(neopad_renderer_t this) {
@@ -232,9 +224,6 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
 
     vec3 camera = {0.0f, 0.0f, 0.0f};
     glm_vec2_copy(this->camera, camera);
-
-    // MATRICES
-    // --------
 
     // Model matrix applies the content_scale to x and y (leaves z and w alone).
     // - On non-retina displays, this is an identity matrix.
@@ -262,6 +251,10 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     float t = height / 2.0f;
     glm_ortho(l / zoom, r / zoom, b / zoom, t / zoom, -1.0f, 1.0f, this->proj);
 
+    bgfx_set_view_transform(VIEW_CONTENT, this->model_view, this->proj);
+    bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
+    bgfx_touch(VIEW_CONTENT);
+
     for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
         neopad_renderer_module_t mod = this->modules[i];
         if (mod.base->on_end_frame) {
@@ -269,21 +262,12 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
         }
     }
 
-    // CONTENT
-    // -------
-
-    bgfx_set_view_transform(VIEW_CONTENT, this->model_view, this->proj);
-    bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
-    bgfx_touch(VIEW_CONTENT);
-
-    // DEBUG
-    // -----
-
-    // Display current camera coordinates, zoom, content-scale.
-    bgfx_dbg_text_clear(0, false);
-    bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", camera[0], camera[1]);
-    bgfx_dbg_text_printf(0, 1, 0x0f, "  Zoom: %f", this->zoom);
-    bgfx_dbg_text_printf(0, 2, 0x0f, " Scale: %f", this->content_scale);
+    if (this->init.debug) {
+        bgfx_dbg_text_clear(0, false);
+        bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", camera[0], camera[1]);
+        bgfx_dbg_text_printf(0, 1, 0x0f, "  Zoom: %f", this->zoom);
+        bgfx_dbg_text_printf(0, 2, 0x0f, " Scale: %f", this->content_scale);
+    }
 
     bgfx_frame(false);
 }

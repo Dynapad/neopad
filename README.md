@@ -85,3 +85,13 @@ feature of the renderer, such as rendering text or vector graphics.
   - [ ] Ellipse
   - [ ] Rectangle
 - [ ] Text - text rendering
+
+#### Renderer Lifecycle
+
+```
+create
+  ↓
+ init
+  ↓
+    
+```
