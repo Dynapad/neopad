@@ -217,15 +217,28 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
     }
 }
 
+static float max_y_offset = 0;
+static float min_y_offset = 0;
 
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
-
     // Update the zoom, applying a logarithmic function to prevent extremely fast
     // zooming when zoomed out substantially.
+//    printf("y_offset: %f\n", y_offset);
+//
+//    max_y_offset = glm_max(max_y_offset, (float) y_offset);
+//    min_y_offset = glm_min(min_y_offset, (float) y_offset);
+//
+//    printf("max_y_offset: %f\n", max_y_offset);
+//    printf("min_y_offset: %f\n", min_y_offset);
+//
+//    y_offset *= 2;
 
     // Adjust the zoom level logarithmically.
     if (y_offset > 0) zoom *= powf(ZOOM_FACTOR, (float) y_offset);
     else if (y_offset < 0) zoom /= powf(ZOOM_FACTOR, (float) -y_offset);
+
+    // Snap zoom to increments of 0.1.
+    zoom = roundf(zoom * 10) / 10;
 
     // Clamp zoom betwixt 0.1 and 2.0.
     zoom = glm_clamp(zoom, 0.1f, 10.0f);
@@ -288,8 +301,8 @@ void teardown(GLFWwindow *window) {
 void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
     neopad_renderer_draw_background(renderer);
-    neopad_renderer_draw_test_rect(renderer, -100, 0, 0, -100);
-    neopad_renderer_draw_test_rect(renderer, 0, 100, 100, 0);
+//    neopad_renderer_draw_test_rect(renderer, -100, 0, 0, -100);
+    neopad_renderer_draw_test_rect(renderer, 0, 1, 1, 0);
     neopad_renderer_end_frame(renderer);
 }
 

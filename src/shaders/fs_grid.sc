@@ -8,7 +8,8 @@ $input v_color0
 // @param x0: world coordinate
 // @param width: world-pixel width of a single pixel at the current zoom level
 float pixline(float x, float x0, float width) {
-    return step(x0 - width/2.0, x) - step(x0 + width/2.0, x);
+    float half_width = width / 2.0;
+    return step(x, x0 + half_width) - step(x, x0 - half_width);
 }
 
 // Single pixel grid SDF.
@@ -17,8 +18,8 @@ float pixline(float x, float x0, float width) {
 // @param width: world-pixel width of a single pixel at the current zoom level
 float pixgrid(vec2 xy, float tick, float width) {
     return max(
-        pixline(xy.x, tick * floor(xy.x / tick), width),
-        pixline(xy.y, tick * floor(xy.y / tick), width)
+        pixline(xy.x, tick * round(xy.x / tick), width),
+        pixline(xy.y, tick * round(xy.y / tick), width)
     );
 }
 
@@ -46,7 +47,7 @@ void main()
 
     // Transform back to world coordinates using the inverse viewProj matrix.
     // This accounts for the camera's position and zoom.
-    vec2 xy_world = mul(u_invViewProj, vec4(xy_ndc, 0.0, 1.0)).xy;
+    vec2 xy_world = (u_invViewProj * vec4(xy_ndc, 0.0, 1.0)).xy;
 
     vec3 color = vec3(0.0, 0.0, 0.0);
 

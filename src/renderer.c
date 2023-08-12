@@ -53,6 +53,10 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
         exit(EXIT_FAILURE);
     }
 
+    // Initial reset.
+    const uint32_t reset_flags = BGFX_RESET_VSYNC;
+    bgfx_reset(this->width, this->height, reset_flags, this->bgfx_init.resolution.format);
+
     bgfx_set_debug(this->init.debug ? BGFX_DEBUG_TEXT : 0);
 
     // Initialize vertex layout
@@ -184,11 +188,12 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
         this->height = this->target_height;
-        bgfx_reset(this->width, this->height, BGFX_RESET_VSYNC, this->bgfx_init.resolution.format);
+        const uint32_t reset_flags = BGFX_RESET_VSYNC;
+        bgfx_reset(this->width, this->height, reset_flags, this->bgfx_init.resolution.format);
     }
 
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
-        float smoothness = 10.0f;
+        float smoothness = 50.0f;
         vec2 delta_camera;
         vec2 interp_camera;
         glm_vec2_sub(this->target_camera, this->camera, delta_camera);
@@ -197,8 +202,9 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         glm_vec2_copy(interp_camera, this->camera);
     }
 
-    if (this->zoom != this->target_zoom) {
-        float smoothness = 30.0f;
+    float zoom_tol = 0.001f;
+    if (fabsf(this->zoom - this->target_zoom) > zoom_tol) {
+        float smoothness = 50.0f * this->content_scale;
         float delta_zoom = this->target_zoom - this->zoom;
         float interp_zoom = delta_zoom / smoothness;
         this->zoom = this->zoom + interp_zoom;
@@ -263,10 +269,17 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     }
 
     if (this->init.debug) {
+        const bgfx_stats_t *stats = bgfx_get_stats();
+
+        const double freq = (double) stats->cpuTimerFreq;
+        const double toMs = 1000.0f / (double) freq;
+        const double frameTime = (double) stats->cpuTimeEnd - (double) stats->cpuTimeBegin;
+
         bgfx_dbg_text_clear(0, false);
-        bgfx_dbg_text_printf(0, 0, 0x0f, "Camera: %f, %f", camera[0], camera[1]);
-        bgfx_dbg_text_printf(0, 1, 0x0f, "  Zoom: %f", this->zoom);
-        bgfx_dbg_text_printf(0, 2, 0x0f, " Scale: %f", this->content_scale);
+        bgfx_dbg_text_printf(0, 0, 0x0f, "CPU FPS: %.2f", freq / frameTime);
+        bgfx_dbg_text_printf(0, 1, 0x0f, " Camera: %f, %f", camera[0], camera[1]);
+        bgfx_dbg_text_printf(0, 2, 0x0f, "   Zoom: %f", this->zoom);
+        bgfx_dbg_text_printf(0, 3, 0x0f, "  Scale: %f", this->content_scale);
     }
 
     bgfx_frame(false);

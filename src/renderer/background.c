@@ -19,7 +19,7 @@ uint16_t NDC_QUAD_INDICES[] = {
         0, 2, 3,
 };
 
-void neopad_renderer_background_module_on_setup(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_setup(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     neopad_renderer_module_background_t this = module.background;
 
     renderer->programs[PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
@@ -38,16 +38,16 @@ void neopad_renderer_background_module_on_setup(neopad_renderer_module_t module,
             BGFX_BUFFER_NONE);
 }
 
-void neopad_renderer_background_module_on_teardown(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_teardown(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     // No teardown required.
 }
 
-void neopad_renderer_background_module_on_begin_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_begin_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     renderer->uniforms.grid_major = module.background->grid_major;
     renderer->uniforms.grid_minor = module.background->grid_minor;
 }
 
-void neopad_renderer_background_module_on_render(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_render(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     neopad_renderer_module_background_t this = module.background;
     bgfx_view_id_t view_id = module.base->view_id;
 
@@ -68,7 +68,7 @@ void neopad_renderer_background_module_on_render(neopad_renderer_module_t module
     bgfx_submit(view_id, renderer->programs[PROGRAM_BACKGROUND], 0, false);
 }
 
-void neopad_renderer_background_module_on_end_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_end_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     // The background uses the same view and projection matrices as the content, but
     // it does not use them in the same way. The background is always drawn at the same
     // size, regardless of the content scale or zoom. It renders geometry provided in
@@ -86,7 +86,7 @@ void neopad_renderer_background_module_on_end_frame(neopad_renderer_module_t mod
     bgfx_touch(view_id);
 }
 
-void neopad_renderer_module_background_destroy(neopad_renderer_module_background_t module) {
+void destroy(neopad_renderer_module_background_t module) {
     free(module);
 }
 
@@ -97,12 +97,12 @@ neopad_renderer_module_t neopad_renderer_module_background_create(bgfx_view_id_t
             .base = {
                     .name = "background",
                     .view_id = view_id,
-                    .on_setup = neopad_renderer_background_module_on_setup,
-                    .on_teardown = neopad_renderer_background_module_on_teardown,
-                    .on_begin_frame = neopad_renderer_background_module_on_begin_frame,
-                    .on_end_frame = neopad_renderer_background_module_on_end_frame,
-                    .render = neopad_renderer_background_module_on_render,
-                    .destroy = neopad_renderer_module_background_destroy,
+                    .on_setup = on_setup,
+                    .on_teardown = on_teardown,
+                    .on_begin_frame = on_begin_frame,
+                    .on_end_frame = on_end_frame,
+                    .render = on_render,
+                    .destroy = destroy,
             },
             .color = 0x333333ff,
             .grid_enabled = true,
