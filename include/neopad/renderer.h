@@ -97,6 +97,12 @@ void neopad_renderer_rescale(neopad_renderer_t this, float content_scale);
 /// @note Takes effect on the next frame rendered.
 void neopad_renderer_zoom(neopad_renderer_t this, float zoom);
 
+/// Arrest the zoom of the renderer.
+/// @note This is useful for "canceling" a zoom gesture, for example.
+/// @note Takes effect on the next frame rendered.
+/// @return The current zoom.
+float neopad_renderer_arrest_zoom(neopad_renderer_t this);
+
 /// Reposition the viewport of the renderer.
 /// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.

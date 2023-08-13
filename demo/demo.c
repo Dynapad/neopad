@@ -104,6 +104,7 @@ static int saved_height = 0;
 
 // Zooming
 const float ZOOM_FACTOR = 1.2f;
+static float zoom = 1.0f;
 
 // Dragging
 static bool mouse_down = false;
@@ -112,8 +113,7 @@ static vec2 drag_from = {0, 0};
 static vec2 drag_to = {0, 0};
 static vec2 camera_start = {0, 0};
 
-// Zoom is also used to control drag velocity.
-static float zoom = 1;
+
 
 #pragma mark - Utility Functions
 
@@ -187,6 +187,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        neopad_renderer_arrest_zoom(renderer);
         if (action == GLFW_PRESS) {
             mouse_down = true;
             get_cursor_pos(window, drag_from);
@@ -217,21 +218,26 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
     }
 }
 
-static float max_y_offset = 0;
-static float min_y_offset = 0;
-
+static double dead_zone = 5.0;
+static double last_y_offset = 0.0;
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
-    // Update the zoom, applying a logarithmic function to prevent extremely fast
-    // zooming when zoomed out substantially.
-//    printf("y_offset: %f\n", y_offset);
-//
-//    max_y_offset = glm_max(max_y_offset, (float) y_offset);
-//    min_y_offset = glm_min(min_y_offset, (float) y_offset);
-//
-//    printf("max_y_offset: %f\n", max_y_offset);
-//    printf("min_y_offset: %f\n", min_y_offset);
-//
-//    y_offset *= 2;
+    // If the direction of the scroll changed, arrest any ongoing zoom,
+    // even if it's in the dead zone.
+    bool dir_changed = last_y_offset * y_offset < 0;
+    bool in_dead_zone = fabs(y_offset) < dead_zone;
+
+    if (dir_changed) {
+        printf("dir changed\n");
+        zoom = neopad_renderer_arrest_zoom(renderer);
+        last_y_offset = y_offset;
+    }
+
+    // If we're in the dead zone, do nothing.
+    // The dead zone is 3x as large if we just arrested the zoom.
+    if (fabs(y_offset) < dead_zone * (3 * dir_changed)) {
+        printf("dead zone %f\n", fabs(y_offset));
+        return;
+    }
 
     // Adjust the zoom level logarithmically.
     if (y_offset > 0) zoom *= powf(ZOOM_FACTOR, (float) y_offset);
@@ -240,10 +246,11 @@ void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     // Snap zoom to increments of 0.1.
     zoom = roundf(zoom * 10) / 10;
 
-    // Clamp zoom betwixt 0.1 and 2.0.
+    // Clamp zoom betwixt 0.1 and 10.0.
     zoom = glm_clamp(zoom, 0.1f, 10.0f);
-
     neopad_renderer_zoom(renderer, zoom);
+
+    last_y_offset = y_offset;
 }
 
 void window_size_callback(GLFWwindow *window, int width, int height) {

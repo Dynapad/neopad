@@ -47,7 +47,7 @@ void main()
 
     // Transform back to world coordinates using the inverse viewProj matrix.
     // This accounts for the camera's position and zoom.
-    vec2 xy_world = (u_invViewProj * vec4(xy_ndc, 0.0, 1.0)).xy;
+    vec2 xy_world = mul(u_invViewProj, vec4(xy_ndc, 0.0, 1.0)).xy;
 
     vec3 color = vec3(0.0, 0.0, 0.0);
 
@@ -55,8 +55,8 @@ void main()
     float width = max(1.0, ceil(1.0 / u_zoom) + (1.0 / u_zoom));
 
     // Single world-pixel major and minor grid lines.
-    color += gray333 * pixgrid(xy_world, u_grid_major, width);
-    color += gray111 * pixgrid(xy_world, u_grid_minor, width);
+    color += gray333 * pixgrid(round(xy_world), u_grid_major, width);
+    color += gray111 * pixgrid(round(xy_world), u_grid_minor, width);
 
     // Single world-pixel axes lines.
     color += red   * pixline(xy_world.y, 0., width);

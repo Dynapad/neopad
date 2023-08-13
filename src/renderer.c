@@ -174,6 +174,11 @@ void neopad_renderer_zoom(neopad_renderer_t this, float zoom) {
     this->target_zoom = zoom;
 }
 
+float neopad_renderer_arrest_zoom(neopad_renderer_t this) {
+    this->target_zoom = this->zoom;
+    return this->zoom;
+}
+
 void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
     glm_vec2_copy(this->camera, dst);
 }
@@ -185,6 +190,15 @@ void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src) {
 #pragma mark - Rendering
 
 void neopad_renderer_begin_frame(neopad_renderer_t this) {
+    // Calculate and update delta time.
+    const bgfx_stats_t *stats = bgfx_get_stats();
+
+    const double freq = (double) stats->cpuTimerFreq;
+    const double to_ms = 1000.0f / (double) freq;
+    const float delta_t = (float) stats->cpuTimeFrame * to_ms;
+
+    // Need to update code below to use delta_t.
+
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
         this->height = this->target_height;
@@ -193,21 +207,27 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     }
 
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
-        float smoothness = 50.0f;
+        float smoothness = 5.0f;
         vec2 delta_camera;
         vec2 interp_camera;
         glm_vec2_sub(this->target_camera, this->camera, delta_camera);
-        glm_vec2_scale(delta_camera, 1.0f / smoothness, interp_camera);
+        glm_vec2_scale(delta_camera, delta_t / smoothness, interp_camera);
         glm_vec2_add(this->camera, interp_camera, interp_camera);
         glm_vec2_copy(interp_camera, this->camera);
     }
 
-    float zoom_tol = 0.001f;
-    if (fabsf(this->zoom - this->target_zoom) > zoom_tol) {
+    float zoom_tol = 0.03f;
+    if (fabsf(this->zoom - this->target_zoom) < zoom_tol) {
+        this->zoom = this->target_zoom;
+        this->uniforms.zoom = this->zoom;
+    }
+    else {
         float smoothness = 50.0f * this->content_scale;
         float delta_zoom = this->target_zoom - this->zoom;
         float interp_zoom = delta_zoom / smoothness;
-        this->zoom = this->zoom + interp_zoom;
+//        float eased_delta_zoom = delta_zoom * powf(0.5f, delta_t * 0.01f * smoothness);
+
+        this->zoom += interp_zoom;
         this->uniforms.zoom = this->zoom;
     }
 
@@ -276,10 +296,11 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
         const double frameTime = (double) stats->cpuTimeEnd - (double) stats->cpuTimeBegin;
 
         bgfx_dbg_text_clear(0, false);
-        bgfx_dbg_text_printf(0, 0, 0x0f, "CPU FPS: %.2f", freq / frameTime);
-        bgfx_dbg_text_printf(0, 1, 0x0f, " Camera: %f, %f", camera[0], camera[1]);
-        bgfx_dbg_text_printf(0, 2, 0x0f, "   Zoom: %f", this->zoom);
-        bgfx_dbg_text_printf(0, 3, 0x0f, "  Scale: %f", this->content_scale);
+        bgfx_dbg_text_printf(0, 0, 0x0f, "   CPU FPS: %.2f", freq / frameTime);
+        bgfx_dbg_text_printf(0, 1, 0x0f, "Delta Time: %.2fms", frameTime * toMs);
+        bgfx_dbg_text_printf(0, 5, 0x0f, "    Camera: %f, %f", camera[0], camera[1]);
+        bgfx_dbg_text_printf(0, 6, 0x0f, "      Zoom: %f", this->zoom);
+        bgfx_dbg_text_printf(0, 7, 0x0f, "     Scale: %f", this->content_scale);
     }
 
     bgfx_frame(false);
