@@ -51,16 +51,21 @@ void main()
 
     vec3 color = vec3(0.0, 0.0, 0.0);
 
-    // Approximately the world-pixel width of a single pixel at the current zoom level.
-    float width = max(1.0, ceil(1.0 / u_zoom) + (1.0 / u_zoom));
+    // Scale the width inversely with zoom to keep the grid lines fine.
+    float width = 1.0 / u_zoom;
 
     // Single world-pixel major and minor grid lines.
-    color += gray333 * pixgrid(round(xy_world), u_grid_major, width);
-    color += gray111 * pixgrid(round(xy_world), u_grid_minor, width);
+    color += gray333 * pixgrid(xy_world, u_grid_major, width);
+
+    // Only draw minor grid lines if the zoom level is high enough.
+    color += step(1.0, u_zoom) * gray111 * pixgrid(xy_world, u_grid_minor, width);
 
     // Single world-pixel axes lines.
     color += red   * pixline(xy_world.y, 0., width);
     color += green * pixline(xy_world.x, 0., width);
+    // Add a blue dot for the origin 0,0 (making the origin a white dot)
+    color += blue * (step(-width/2.0, xy_world.x) - step(width/2.0, xy_world.x))
+                  * (step(-width/2.0, xy_world.y) - step(width/2.0, xy_world.y));
 
 	gl_FragColor = vec4(color, 1.0);
 }

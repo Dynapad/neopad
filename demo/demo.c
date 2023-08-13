@@ -243,9 +243,6 @@ void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
     if (y_offset > 0) zoom *= powf(ZOOM_FACTOR, (float) y_offset);
     else if (y_offset < 0) zoom /= powf(ZOOM_FACTOR, (float) -y_offset);
 
-    // Snap zoom to increments of 0.1.
-    zoom = roundf(zoom * 10) / 10;
-
     // Clamp zoom betwixt 0.1 and 10.0.
     zoom = glm_clamp(zoom, 0.1f, 10.0f);
     neopad_renderer_zoom(renderer, zoom);
@@ -308,8 +305,8 @@ void teardown(GLFWwindow *window) {
 void draw(GLFWwindow *window) {
     neopad_renderer_begin_frame(renderer);
     neopad_renderer_draw_background(renderer);
-//    neopad_renderer_draw_test_rect(renderer, -100, 0, 0, -100);
-    neopad_renderer_draw_test_rect(renderer, 0, 1, 1, 0);
+    // neopad_renderer_draw_test_rect(renderer, -100, 0, 0, -100);
+    // neopad_renderer_draw_test_rect(renderer, 0, 1, 1, 0);
     neopad_renderer_end_frame(renderer);
 }
 
