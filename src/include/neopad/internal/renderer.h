@@ -13,6 +13,7 @@
 #include "../../../util/bgfx/embedded_shader.h"
 #include "generated/shaders/src/all.h"
 
+#include "neopad/types.h"
 #include "neopad/renderer.h"
 #include "neopad/internal/renderer/module.h"
 
@@ -28,15 +29,13 @@
 /// @note This is a pad-world coordinate.
 /// @note At zoom 1.0, these coordinates map to logical pixels.
 /// @note However, (0, 0) is the center of the screen.
-typedef struct neopad_vertex_s {
-    float x;
-    float y;
-    float z;
+typedef struct __attribute__ ((__packed__)) {
+    vec4 xyzw;
     uint32_t argb;
 } neopad_renderer_vertex_t;
 
 /// Structure matching defines in shaders/uniforms.sh
-typedef struct neopad_uniforms_s {
+typedef struct {
     float time;
     float zoom;
     float _unused1;

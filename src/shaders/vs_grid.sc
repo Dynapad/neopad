@@ -7,6 +7,6 @@ void main()
 {
 	// The grid quad is already an NDC unit quad (-1., 1., 1., -1.).
 	// So, just pass it through.
-	gl_Position = vec4(a_position, 1.0);
+	gl_Position = a_position;
 	v_color0 = a_color0;
 }

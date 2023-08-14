@@ -116,33 +116,33 @@ void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src);
 #pragma mark - Frame
 
 /// Begin a frame.
-/// \param this The renderer.
+/// @param this The renderer.
 void neopad_renderer_begin_frame(neopad_renderer_t this);
 
 /// End a frame.
-/// \param this The renderer.
+/// @param this The renderer.
 void neopad_renderer_end_frame(neopad_renderer_t this);
 
 #pragma mark - Drawing
 
 void neopad_renderer_draw_background(neopad_renderer_t this);
-
+void neopad_renderer_draw_cursor(neopad_renderer_t this, vec2 p);
 void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, float r, float b);
 
 #pragma mark - Line Drawing
 
 /// Begin a series of points.
-/// \param this The renderer.
-/// \param p The first point.
+/// @param this The renderer.
+/// @param p The first point.
 void neopad_renderer_begin_points(neopad_renderer_t this, vec2 p);
 
 /// Add a point to the current series.
-/// \param this The renderer.
-/// \param p The point to add.
+/// @param this The renderer.
+/// @param p The point to add.
 void neopad_renderer_pen_add_point(neopad_renderer_t this, vec2 p);
 
 /// End a series of points.
-/// \param this The renderer.
+/// @param this The renderer.
 void neopad_renderer_end_points(neopad_renderer_t this);
 
 #pragma mark - Demo

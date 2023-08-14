@@ -8,10 +8,10 @@
 #include <memory.h>
 
 static const neopad_renderer_vertex_t NDC_QUAD_VERTICES[] = {
-        {-1, 1,  0,  0},
-        {1,  1,  0, 0},
-        {1,  -1, 0,  0},
-        {-1, -1, 0,  0},
+        {-1, 1,  0, 1, 0},
+        {1,  1,  0, 1, 0},
+        {1,  -1, 0, 1, 0},
+        {-1, -1, 0, 1, 0},
 };
 
 uint16_t NDC_QUAD_INDICES[] = {
@@ -90,7 +90,14 @@ void destroy(neopad_renderer_module_background_t module) {
     free(module);
 }
 
-neopad_renderer_module_t neopad_renderer_module_background_create(bgfx_view_id_t view_id) {
+neopad_renderer_module_t
+neopad_renderer_module_background_create(
+        bgfx_view_id_t view_id,
+        uint32_t color,
+        bool grid_enabled,
+        float grid_major,
+        float grid_minor
+) {
     neopad_renderer_module_background_t module = malloc(sizeof(struct neopad_renderer_module_background_s));
 
     memcpy(module, &(struct neopad_renderer_module_background_s) {
@@ -104,10 +111,10 @@ neopad_renderer_module_t neopad_renderer_module_background_create(bgfx_view_id_t
                     .render = on_render,
                     .destroy = destroy,
             },
-            .color = 0x333333ff,
-            .grid_enabled = true,
-            .grid_major = 100.0f,
-            .grid_minor = 25.0f
+            .color = color,
+            .grid_enabled = grid_enabled,
+            .grid_major = grid_major,
+            .grid_minor = grid_minor
     }, sizeof(struct neopad_renderer_module_background_s));
 
     return (neopad_renderer_module_t) {.background = module};

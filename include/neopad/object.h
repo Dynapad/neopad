@@ -2,8 +2,8 @@
 // Created by Dylan Lukes on 8/13/23.
 //
 
-#ifndef NEOPAD_GEOMETRY_H
-#define NEOPAD_GEOMETRY_H
+#ifndef NEOPAD_OBJECT_H
+#define NEOPAD_OBJECT_H
 
 #include <cglm/vec2.h>
 
@@ -22,4 +22,4 @@ typedef struct ellipse_s {
     vec2 radii;
 } ellipse_t;
 
-#endif //NEOPAD_GEOMETRY_H
+#endif //NEOPAD_OBJECT_H

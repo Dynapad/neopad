@@ -24,6 +24,6 @@ typedef struct neopad_renderer_module_background_s {
     bgfx_index_buffer_handle_t ibo;
 } *neopad_renderer_module_background_t;
 
-neopad_renderer_module_t neopad_renderer_module_background_create(bgfx_view_id_t view_id);
+neopad_renderer_module_t neopad_renderer_module_background_create(bgfx_view_id_t view_id, uint32_t color, bool grid_enabled, float grid_major, float grid_minor);
 
 #endif //NEOPAD_RENDERER_BACKGROUND_INTERNAL_H

@@ -5,6 +5,7 @@
 #include <cglm/cam.h>
 #include <memory.h>
 
+#include "neopad/types.h"
 #include "neopad/renderer.h"
 #include "neopad/internal/log.h"
 #include "neopad/internal/renderer.h"
@@ -31,7 +32,12 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     this->zoom = this->target_zoom = 1.0f;
 
     // Populate modules
-    this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create(VIEW_BACKGROUND);
+    this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create(
+            VIEW_BACKGROUND,
+            this->init.background.color,
+            this->init.background.grid_enabled,
+            this->init.background.grid_major,
+            this->init.background.grid_minor);
     this->modules[NEOPAD_RENDERER_MODULE_VECTOR] = neopad_renderer_module_vector_create();
 
     // Switch to single-threaded mode for simplicity...
@@ -61,7 +67,7 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
 
     // Initialize vertex layout
     bgfx_vertex_layout_begin(&this->vertex_layout, BGFX_RENDERER_TYPE_NOOP);
-    bgfx_vertex_layout_add(&this->vertex_layout, BGFX_ATTRIB_POSITION, 3, BGFX_ATTRIB_TYPE_FLOAT, false, false);
+    bgfx_vertex_layout_add(&this->vertex_layout, BGFX_ATTRIB_POSITION, 4, BGFX_ATTRIB_TYPE_FLOAT, false, false);
     bgfx_vertex_layout_add(&this->vertex_layout, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8, true, false);
     bgfx_vertex_layout_end(&this->vertex_layout);
 
@@ -123,7 +129,7 @@ void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 vi
     mat4 viewport_to_ndc;
     mat4 inv_model_view;
     mat4 inv_proj;
-    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], 0.0f, 1.0f, viewport_to_ndc);
+    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
 
     glm_mat4_inv(this->model_view, inv_model_view);
     glm_mat4_inv(this->proj, inv_proj);
@@ -144,7 +150,7 @@ neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewpo
     mat4 viewport_to_ndc;
     mat4 inv_model;
     mat4 inv_proj;
-    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], 0.0f, 1.0f, viewport_to_ndc);
+    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
 
     glm_mat4_inv(this->model, inv_model);
     glm_mat4_inv(this->proj, inv_proj);
@@ -207,7 +213,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     }
 
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
-        float smoothness = 5.0f;
+        float smoothness = 10.0f;
         vec2 delta_camera;
         vec2 interp_camera;
         glm_vec2_sub(this->target_camera, this->camera, delta_camera);
@@ -220,13 +226,10 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
     if (fabsf(this->zoom - this->target_zoom) < zoom_tol) {
         this->zoom = this->target_zoom;
         this->uniforms.zoom = this->zoom;
-    }
-    else {
+    } else {
         float smoothness = 50.0f * this->content_scale;
         float delta_zoom = this->target_zoom - this->zoom;
         float interp_zoom = delta_zoom / smoothness;
-//        float eased_delta_zoom = delta_zoom * powf(0.5f, delta_t * 0.01f * smoothness);
-
         this->zoom += interp_zoom;
         this->uniforms.zoom = this->zoom;
     }
@@ -298,8 +301,8 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
         bgfx_dbg_text_clear(0, false);
         bgfx_dbg_text_printf(0, 0, 0x0f, "   CPU FPS: %.2f", freq / frameTime);
         bgfx_dbg_text_printf(0, 1, 0x0f, "Delta Time: %.2fms", frameTime * toMs);
-        bgfx_dbg_text_printf(0, 5, 0x0f, "    Camera: %f, %f", camera[0], camera[1]);
-        bgfx_dbg_text_printf(0, 6, 0x0f, "      Zoom: %f", this->zoom);
+        bgfx_dbg_text_printf(0, 5, 0x0f, "    Camera: (%f, %f)", camera[0], camera[1]);
+        bgfx_dbg_text_printf(0, 6, 0x0f, "      Zoom: %f -> %f", this->zoom, this->target_zoom);
         bgfx_dbg_text_printf(0, 7, 0x0f, "     Scale: %f", this->content_scale);
     }
 
@@ -322,11 +325,16 @@ void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, fl
     bgfx_alloc_transient_vertex_buffer(&tvb, 4, &this->vertex_layout);
     bgfx_alloc_transient_index_buffer(&tib, 6, false);
 
+    // Linear map the value of this->zoom from [1, 10] to [0.8, 0.0].
+    // For values less than 1.0, the alpha will be 1.0.
+    uint8_t a = this->zoom < 1 ? 0xCC : (uint8_t) (255.0f * (0.8f - (this->zoom - 1.0f) / 9.0f));
+    uint32_t alpha = a << 24;
+
     neopad_renderer_vertex_t vertices[] = {
-            {l, b, 0.0f, 0xff0000ff},
-            {l, t, 0.0f, 0xff00ff00},
-            {r, t, 0.0f, 0xffff0000},
-            {r, b, 0.0f, 0xffffffff},
+            {l, t, 0, 1, alpha | 0x0000ff00},
+            {r, t, 0, 1, alpha | 0x00ff0000},
+            {r, b, 0, 1, alpha | 0x00ffffff},
+            {l, b, 0, 1, alpha | 0x000000ff},
     };
     memcpy(tvb.data, vertices, sizeof(vertices));
 
@@ -339,6 +347,8 @@ void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, fl
     bgfx_set_transient_vertex_buffer(0, &tvb, 0, 4);
     bgfx_set_transient_index_buffer(&tib, 0, 6);
 
-    bgfx_set_state(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A, 0);
+    bgfx_set_state(BGFX_STATE_WRITE_RGB
+                   | BGFX_STATE_WRITE_A
+                   | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA), 0);
     bgfx_submit(VIEW_CONTENT, this->programs[PROGRAM_BASIC], 0, false);
 }
