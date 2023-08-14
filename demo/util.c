@@ -4,6 +4,15 @@
 #include "cglm/cglm.h"
 #include "neopad/types.h"
 
+GLFWmonitor *glfwGetStartupMonitor(void) {
+    // Get the list of monitors.
+    int monitor_count;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitor_count);
+
+    // Return the second monitor if it exists, otherwise NULL (start windowed).
+    return monitor_count > 1 ? monitors[1] : NULL;
+}
+
 GLFWmonitor *glfwFindWindowMonitor(GLFWwindow* window) {
     // Get the window's position and size.
     neopad_ivec_t window_rect;

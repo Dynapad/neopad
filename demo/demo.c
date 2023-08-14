@@ -351,7 +351,8 @@ GLFWwindow *setup(int width, int height) {
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 
-    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", NULL, NULL);
+    GLFWmonitor *monitor = NULL;
+    GLFWwindow *window = glfwCreateWindow(width, height, "Neopad Demo", monitor, NULL);
     if (!window) {
         eprintf("Error: unable to create window");
         glfwTerminate();
