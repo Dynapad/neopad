@@ -8,4 +8,5 @@ FetchContent_Declare (
 set(BGFX_BUILD_TOOLS ON CACHE INTERNAL "")
 set(BGFX_BUILD_EXAMPLES OFF CACHE INTERNAL "")
 set(BGFX_CUSTOM_TARGETS OFF CACHE INTERNAL "")
+set(BGFX_MULTITHREADED OFF CACHE INTERNAL "")  # todo: rewrite to disable this
 FetchContent_MakeAvailable(bgfx)

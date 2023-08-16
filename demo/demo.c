@@ -146,10 +146,40 @@ typedef struct {
     } zoom;
 } demo_state_t;
 
-// Full Screen
-static bool fullscreen = false;
-static int saved_width = 0;
-static int saved_height = 0;
+void toggle_fullscreen(GLFWwindow *window) {
+    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
+
+    // If we're already in fullscreen mode, exit it.
+    if (state->fullscreen.is_active) {
+        int *pos = &state->fullscreen.saved_window.pos[0];
+        int *size = &state->fullscreen.saved_window.size[0];
+
+        neopad_renderer_resize(renderer, size[0], size[1]);
+        glfwSetWindowMonitor(window, NULL,
+                             pos[0], pos[1],
+                             size[0], size[1],
+                             GLFW_DONT_CARE);
+        state->fullscreen.is_active = false;
+        return;
+    }
+
+    // Otherwise, save the window position and size.
+    int *pos = state->fullscreen.saved_window.pos;
+    int *size = state->fullscreen.saved_window.size;
+    glfwGetWindowPos(window, &pos[0], &pos[1]);
+    glfwGetWindowSize(window, &size[0], &size[1]);
+
+    // Get the current monitor and its details.
+    GLFWmonitor *monitor = glfwFindWindowMonitor(window); // note: custom function in util.h
+    const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+    // Resize the renderer.
+    neopad_renderer_resize(renderer, mode->width, mode->height);
+
+    // Switch to fullscreen mode.
+    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    state->fullscreen.is_active = true;
+}
 
 // Zooming
 const float ZOOM_FACTOR = 1.2f;
@@ -181,9 +211,6 @@ void error_callback(int error, const char *description) {
     eprintf("GLFW Error: %s\n", description);
 }
 
-static int vim_exit = 0;
-static int emacs_exit = 0;
-
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
@@ -195,59 +222,12 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             case GLFW_KEY_SPACE:
                 neopad_renderer_set_camera(renderer, (vec2) {0, 0});
                 neopad_renderer_zoom(renderer, 1);
-            case GLFW_KEY_SEMICOLON:
-                if (mods & GLFW_MOD_SHIFT) vim_exit = 1;
-                break;
-            case GLFW_KEY_C:
-                if (emacs_exit == 1 && mods & GLFW_MOD_CONTROL) {
-                    glfwSetWindowShouldClose(window, GLFW_TRUE);
-                }
                 break;
             case GLFW_KEY_F:
-                // If we're already in fullscreen mode, exit it.
-                if (state->fullscreen.is_active) {
-                    int *pos = &state->fullscreen.saved_window.pos[0];
-                    int *size = &state->fullscreen.saved_window.size[0];
-
-                    neopad_renderer_resize(renderer, size[0], size[1]);
-                    glfwSetWindowMonitor(window, NULL,
-                                         pos[0], pos[1],
-                                         size[0], size[1],
-                                         GLFW_DONT_CARE);
-                    state->fullscreen.is_active = false;
-                    break;
-                }
-
-                // Otherwise, save the window position and size.
-                int *pos = state->fullscreen.saved_window.pos;
-                int *size = state->fullscreen.saved_window.size;
-                glfwGetWindowPos(window, &pos[0], &pos[1]);
-                glfwGetWindowSize(window, &size[0], &size[1]);
-
-                // Get the current monitor and its details.
-                GLFWmonitor *monitor = glfwFindWindowMonitor(window); // note: custom function in util.h
-                const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-
-                // Resize the renderer.
-                neopad_renderer_resize(renderer, mode->width, mode->height);
-
-                // Switch to fullscreen mode.
-                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-
-                state->fullscreen.is_active = true;
-                break;
-            case GLFW_KEY_Q:
-                if (vim_exit == 1) vim_exit = 2;
-                break;
-            case GLFW_KEY_X:
-                if (mods & GLFW_MOD_CONTROL) emacs_exit = 1;
-            case GLFW_KEY_ENTER:
-                if (vim_exit == 2) {
-                    glfwSetWindowShouldClose(window, GLFW_TRUE);
-                }
+                toggle_fullscreen(window);
                 break;
             default:
-                vim_exit = 0;
+                break;
         }
     }
 }
@@ -407,9 +387,8 @@ void run(GLFWwindow *window) {
     neopad_renderer_setup(renderer, init);
 
     while (!glfwWindowShouldClose(window)) {
-        // Poll for events and check if the window resized.
-        glfwPollEvents();
         draw(window);
+        glfwPollEvents();
     }
 
     neopad_renderer_teardown(renderer);

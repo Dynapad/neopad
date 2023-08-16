@@ -19,7 +19,7 @@ typedef struct neopad_renderer_module_base_s *neopad_renderer_module_base_t;
 typedef struct neopad_renderer_module_background_s *neopad_renderer_module_background_t;
 typedef struct neopad_renderer_module_vector_s *neopad_renderer_module_vector_t;
 
-typedef union __attribute__((transparent_union)) neopad_renderer_module_s {
+typedef union __attribute__((transparent_union)) {
     neopad_renderer_module_base_t base;
     neopad_renderer_module_background_t background;
     neopad_renderer_module_vector_t vector;

@@ -19,9 +19,7 @@ uint16_t NDC_QUAD_INDICES[] = {
         0, 2, 3,
 };
 
-void on_setup(neopad_renderer_module_t module, neopad_renderer_t renderer) {
-    neopad_renderer_module_background_t this = module.background;
-
+void on_setup(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
     renderer->programs[PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
             embedded_shaders,
             bgfx_get_renderer_type(),
@@ -42,14 +40,13 @@ void on_teardown(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     // No teardown required.
 }
 
-void on_begin_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
-    renderer->uniforms.grid_major = module.background->grid_major;
-    renderer->uniforms.grid_minor = module.background->grid_minor;
+void on_begin_frame(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
+    renderer->uniforms.grid_major = this->grid_major;
+    renderer->uniforms.grid_minor = this->grid_minor;
 }
 
-void on_render(neopad_renderer_module_t module, neopad_renderer_t renderer) {
-    neopad_renderer_module_background_t this = module.background;
-    bgfx_view_id_t view_id = module.base->view_id;
+void on_render(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
+    bgfx_view_id_t view_id = this->base.view_id;
 
     if (!this->grid_enabled) {
         return;
@@ -68,7 +65,7 @@ void on_render(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     bgfx_submit(view_id, renderer->programs[PROGRAM_BACKGROUND], 0, false);
 }
 
-void on_end_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
+void on_end_frame(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
     // The background uses the same view and projection matrices as the content, but
     // it does not use them in the same way. The background is always drawn at the same
     // size, regardless of the content scale or zoom. It renders geometry provided in
@@ -76,18 +73,19 @@ void on_end_frame(neopad_renderer_module_t module, neopad_renderer_t renderer) {
     // invert them and use them to transform the clip-space coordinates into world-space
     // coordinates. This allows the background to be drawn in the same world-space as the
     // content, but at a fixed size.
-
-    neopad_renderer_module_background_t this = module.background;
-    bgfx_view_id_t view_id = module.base->view_id;
+    bgfx_view_id_t view_id = this->base.view_id;
 
     bgfx_set_view_clear(view_id, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, this->color, 1.0f, 0);
     bgfx_set_view_transform(view_id, renderer->model_view, renderer->proj);
     bgfx_set_view_rect(view_id, 0, 0, renderer->width, renderer->height);
+
     bgfx_touch(view_id);
 }
 
-void destroy(neopad_renderer_module_background_t module) {
-    free(module);
+void destroy(neopad_renderer_module_background_t this) {
+    bgfx_destroy_index_buffer(this->ibo);
+    bgfx_destroy_vertex_buffer(this->vbo);
+    free(this);
 }
 
 neopad_renderer_module_t
