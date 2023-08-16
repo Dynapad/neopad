@@ -11,6 +11,7 @@
 #include "neopad/internal/renderer.h"
 #include "neopad/internal/renderer/background.h"
 #include "neopad/internal/renderer/vector.h"
+#include "neopad/internal/util/bx/thread.h"
 
 #pragma mark - Lifecycle
 
@@ -18,6 +19,10 @@ neopad_renderer_t neopad_renderer_create() {
     neopad_renderer_t renderer = malloc(sizeof(struct neopad_renderer_s));
     memset(renderer, 0, sizeof(struct neopad_renderer_s));
     return renderer;
+}
+
+int _thread_fn(bx_thread_t self, void *user_data) {
+    return 0;
 }
 
 void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) {
@@ -43,6 +48,10 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     // Switch to single-threaded mode for simplicity...
     // See: https://bkaradzic.github.io/bgfx/internals.html
     bgfx_render_frame(0);
+
+    // Set up the rendering thread.
+    this->render_thread = bx_thread_create();
+    bx_thread_init(this->render_thread, _thread_fn, this, 0, "neopad-renderer");
 
     // Initialize BGFX
     bgfx_init_ctor(&this->bgfx_init);

@@ -2,11 +2,14 @@ include(${PROJECT_SOURCE_DIR}/cmake/cglm.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/bgfx.cmake)
 
 # Find source files automatically
-file(GLOB_RECURSE NEOPAD_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+file(GLOB_RECURSE NEOPAD_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
 # Note that headers are optional, and do not affect add_library, but they will not
 # show up in some IDEs unless they are listed in add_library.
-file(GLOB_RECURSE NEOPAD_HEADERS CONFIGURE_DEPENDS "${neopad_SOURCE_DIR}/include/*.h")
+file(GLOB_RECURSE NEOPAD_HEADERS CONFIGURE_DEPENDS
+        "${neopad_SOURCE_DIR}/include/*.h")
 
 # Can be compiled as static or dynamic based on user setting.
 add_library(neopad ${NEOPAD_SOURCES} ${NEOPAD_HEADERS})

@@ -5,11 +5,11 @@
  *   - License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#ifndef BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
-#define BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
+#ifndef BGFX_C99_EMBEDDED_SHADER_H
+#define BGFX_C99_EMBEDDED_SHADER_H
 
-#include <bx/platform.h>
-#include <bgfx/c99/bgfx.h>
+#include "bx/platform.h"
+#include "../../../../../../cmake-build-debug/_deps/bgfx-src/bgfx/include/bgfx/c99/bgfx.h"
 
 // Fills for macros missing from C99 BGFX.
 #ifndef BX_CONCATENATE
@@ -21,7 +21,7 @@
 #define BX_COUNTOF(x) ((sizeof(x) / sizeof(*(x))) - 1)
 #endif
 
-#include <bgfx/c99/bgfx.h>
+#include "../../../../../../cmake-build-debug/_deps/bgfx-src/bgfx/include/bgfx/c99/bgfx.h"
 
 #define BGFX_EMBEDDED_SHADER_DXBC(...)
 #define BGFX_EMBEDDED_SHADER_DX9BC(...)
@@ -176,4 +176,4 @@ bgfx_program_handle_t bgfx_create_embedded_program(
         bool _destroyShaders
 );
 
-#endif // BGFX_C99_EMBEDDED_SHADER_H_HEADER_GUARD
+#endif // BGFX_C99_EMBEDDED_SHADER_H

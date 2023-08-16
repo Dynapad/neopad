@@ -10,12 +10,13 @@
 
 #include <cglm/vec2.h>
 
-#include "../../../util/bgfx/embedded_shader.h"
+#include "neopad/internal/util/bgfx/embedded_shader.h"
 #include "generated/shaders/src/all.h"
 
 #include "neopad/types.h"
 #include "neopad/renderer.h"
 #include "neopad/internal/renderer/module.h"
+#include "neopad/internal/util/bx/thread.h"
 
 // todo: these defines could collide?
 
@@ -53,6 +54,9 @@ struct neopad_renderer_s {
 
     /// BGFX initialization parameters.
     bgfx_init_t bgfx_init;
+
+    /// The rendering thread.
+    bx_thread_t render_thread;
 
     /// Back-buffer resolution.
     /// @note For high-DPI displays, this is the resolution before scaling down.
