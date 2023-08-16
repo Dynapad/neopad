@@ -320,7 +320,7 @@ void window_content_scale_callback(GLFWwindow *window, float xscale, float yscal
 
 #pragma mark - Setup / Teardown
 
-GLFWwindow *setup(int width, int height) {
+GLFWwindow *setup(int width, int height, demo_state_t *state) {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
         eprintf("Error: unable to initialize GLFW");
@@ -339,6 +339,7 @@ GLFWwindow *setup(int width, int height) {
         exit(EXIT_FAILURE);
     }
 
+    glfwSetWindowUserPointer(window, state);
     glfwSetKeyCallback(window, key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
@@ -384,23 +385,21 @@ void run(GLFWwindow *window) {
     };
 
     renderer = neopad_renderer_create();
-    neopad_renderer_setup(renderer, init);
+    neopad_renderer_init(renderer, init);
 
     while (!glfwWindowShouldClose(window)) {
         draw(window);
         glfwPollEvents();
     }
 
-    neopad_renderer_teardown(renderer);
+    neopad_renderer_shutdown(renderer);
     neopad_renderer_destroy(renderer);
 }
 
 int main() {
     demo_state_t state;
 
-    GLFWwindow *window = setup(1200, 800);
-    glfwSetWindowUserPointer(window, &state);
-
+    GLFWwindow *window = setup(1200, 800, &state);
     run(window);
     teardown(window);
     return EXIT_SUCCESS;

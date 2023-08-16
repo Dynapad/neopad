@@ -54,17 +54,38 @@ typedef struct neopad_renderer_init_s {
 
 #pragma mark - Lifecycle
 
-/// Create a renderer.
+/// Create (allocate) a renderer.
 neopad_renderer_t neopad_renderer_create();
 
-/// Setup renderer resources.
-void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init);
-
-/// Teardown renderer resources.
-void neopad_renderer_teardown(neopad_renderer_t this);
-
-/// Destroy a renderer.
+/// Destroy (deallocate) a renderer.
 void neopad_renderer_destroy(neopad_renderer_t this);
+
+/// Initialize the renderer. Call this on the thread that will be calling neopad_ functions.
+void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init);
+
+/// Shutdown the renderer. Call this on the thread that called neopad_renderer_init().
+void neopad_renderer_shutdown(neopad_renderer_t this);
+
+#pragma mark - Frames
+
+/// This is a blocking call, which will wait for the API thread to call neopad_renderer_end_frame.
+/// @note Call BEFORE neopad_renderer_init on the thread that will be used for rendering. This may
+///       be the same thread as the API thread, but it doesn't have to be.
+/// @note Should ONLY be called on the render thread. On most systems, this MUST be the main thread.
+/// @note See https://bkaradzic.github.io/bgfx/bgfx.html#_CPPv4N4bgfx11renderFrameE7int32_t
+/// @param this The renderer.
+/// @param timeout_ms A timeout in milliseconds to wait for a frame to finish.
+void neopad_renderer_await_frame(neopad_renderer_t this, int timeout_ms);
+
+/// Begin a frame.
+/// @note This MUST be called on the API thread.
+/// @param this The renderer.
+void neopad_renderer_begin_frame(neopad_renderer_t this);
+
+/// End a frame.
+/// @param this The renderer.
+/// @note This MUST be called on the API thread.
+void neopad_renderer_end_frame(neopad_renderer_t this);
 
 #pragma mark - Coordinate Transformations
 
@@ -112,16 +133,6 @@ void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dest);
 /// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
 void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src);
-
-#pragma mark - Frame
-
-/// Begin a frame.
-/// @param this The renderer.
-void neopad_renderer_begin_frame(neopad_renderer_t this);
-
-/// End a frame.
-/// @param this The renderer.
-void neopad_renderer_end_frame(neopad_renderer_t this);
 
 #pragma mark - Drawing
 

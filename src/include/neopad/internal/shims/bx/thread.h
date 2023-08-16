@@ -1,5 +1,5 @@
-#ifndef BX_C99_THREAD_H
-#define BX_C99_THREAD_H
+#ifndef NEOPAD_SHIMS_BX_THREAD_H
+#define NEOPAD_SHIMS_BX_THREAD_H
 
 /**
  * Exposes a C99 API to bx::Thread.

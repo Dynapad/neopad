@@ -11,9 +11,16 @@
 #include "neopad/internal/renderer.h"
 #include "neopad/internal/renderer/background.h"
 #include "neopad/internal/renderer/vector.h"
-#include "neopad/internal/util/bx/thread.h"
+#include "neopad/internal/shims/bx/thread.h"
 
 #pragma mark - Lifecycle
+
+int api_thread_entry(bx_thread_t self, void *user_data) {
+    bx_thread_set_name(self, "bgfx-api-thread");
+
+    return 0;
+}
+
 
 neopad_renderer_t neopad_renderer_create() {
     neopad_renderer_t renderer = malloc(sizeof(struct neopad_renderer_s));
@@ -21,11 +28,7 @@ neopad_renderer_t neopad_renderer_create() {
     return renderer;
 }
 
-int _thread_fn(bx_thread_t self, void *user_data) {
-    return 0;
-}
-
-void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) {
+void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
     this->init = init;
 
     // Populate ourselves
@@ -45,13 +48,13 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
             this->init.background.grid_minor);
     this->modules[NEOPAD_RENDERER_MODULE_VECTOR] = neopad_renderer_module_vector_create();
 
-    // Switch to single-threaded mode for simplicity...
+    // Mark the current thread as the render thread (usually, this must be the OS created main thread)
     // See: https://bkaradzic.github.io/bgfx/internals.html
     bgfx_render_frame(0);
 
-    // Set up the rendering thread.
+    // Set up the API thread.
     this->render_thread = bx_thread_create();
-    bx_thread_init(this->render_thread, _thread_fn, this, 0, "neopad-renderer");
+    bx_thread_init(this->render_thread, api_thread_entry, this, 0, NULL);
 
     // Initialize BGFX
     bgfx_init_ctor(&this->bgfx_init);
@@ -71,7 +74,6 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     // Initial reset.
     const uint32_t reset_flags = BGFX_RESET_VSYNC;
     bgfx_reset(this->width, this->height, reset_flags, this->bgfx_init.resolution.format);
-
     bgfx_set_debug(this->init.debug ? BGFX_DEBUG_TEXT : 0);
 
     // Initialize vertex layout
@@ -105,7 +107,7 @@ void neopad_renderer_setup(neopad_renderer_t this, neopad_renderer_init_t init) 
     }
 }
 
-void neopad_renderer_teardown(neopad_renderer_t this) {
+void neopad_renderer_shutdown(neopad_renderer_t this) {
     // Per-module teardown, in reverse setup order.
     for (int i = NEOPAD_RENDERER_MODULE_COUNT - 1; i >= 0; i--) {
         neopad_renderer_module_t mod = this->modules[i];
@@ -202,17 +204,18 @@ void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src) {
     glm_vec2_copy(src, this->target_camera);
 }
 
-#pragma mark - Rendering
+#pragma mark - Frames
+
+void neopad_renderer_await_frame(neopad_renderer_t this, int timeout_ms) {
+    bgfx_render_frame(timeout_ms);
+}
 
 void neopad_renderer_begin_frame(neopad_renderer_t this) {
     // Calculate and update delta time.
     const bgfx_stats_t *stats = bgfx_get_stats();
-
     const double freq = (double) stats->cpuTimerFreq;
-    const double to_ms = 1000.0f / (double) freq;
+    const float to_ms = 1000.0f / (float) freq;
     const float delta_t = (float) stats->cpuTimeFrame * to_ms;
-
-    // Need to update code below to use delta_t.
 
     if (this->width != this->target_width || this->height != this->target_height) {
         this->width = this->target_width;
@@ -221,6 +224,7 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, reset_flags, this->bgfx_init.resolution.format);
     }
 
+    // todo: use delta_t here also
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
         float smoothness = 10.0f;
         vec2 delta_camera;

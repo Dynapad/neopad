@@ -2,7 +2,7 @@
 // Created by Dylan Lukes on 4/26/23.
 //
 
-#include "neopad/internal/util/bgfx/embedded_shader.h"
+#include "neopad/internal/shims/bgfx/embedded_shader.h"
 
 #include <string.h>
 

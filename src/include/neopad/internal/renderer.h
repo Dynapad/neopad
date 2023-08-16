@@ -10,13 +10,13 @@
 
 #include <cglm/vec2.h>
 
-#include "neopad/internal/util/bgfx/embedded_shader.h"
+#include "neopad/internal/shims/bgfx/embedded_shader.h"
 #include "generated/shaders/src/all.h"
 
 #include "neopad/types.h"
 #include "neopad/renderer.h"
 #include "neopad/internal/renderer/module.h"
-#include "neopad/internal/util/bx/thread.h"
+#include "neopad/internal/shims/bx/thread.h"
 
 // todo: these defines could collide?
 

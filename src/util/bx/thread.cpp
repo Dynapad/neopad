@@ -3,7 +3,7 @@
 //
 
 #include "bx/thread.h"
-#include "../../include/neopad/internal/util/bx/thread.h"
+#include "neopad/internal/shims/bx/thread.h"
 
 struct bx_thread_s {
     bx::Thread impl;

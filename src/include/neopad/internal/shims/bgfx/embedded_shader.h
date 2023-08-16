@@ -5,8 +5,8 @@
  *   - License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
  */
 
-#ifndef BGFX_C99_EMBEDDED_SHADER_H
-#define BGFX_C99_EMBEDDED_SHADER_H
+#ifndef NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
+#define NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
 
 #include "bx/platform.h"
 #include "../../../../../../cmake-build-debug/_deps/bgfx-src/bgfx/include/bgfx/c99/bgfx.h"
@@ -176,4 +176,4 @@ bgfx_program_handle_t bgfx_create_embedded_program(
         bool _destroyShaders
 );
 
-#endif // BGFX_C99_EMBEDDED_SHADER_H
+#endif // NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
