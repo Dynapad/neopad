@@ -48,10 +48,6 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
             this->init.background.grid_minor);
     this->modules[NEOPAD_RENDERER_MODULE_VECTOR] = neopad_renderer_module_vector_create();
 
-    // Mark the current thread as the render thread (usually, this must be the OS created main thread)
-    // See: https://bkaradzic.github.io/bgfx/internals.html
-    bgfx_render_frame(0);
-
     // Set up the API thread.
     this->render_thread = bx_thread_create();
     bx_thread_init(this->render_thread, api_thread_entry, this, 0, NULL);

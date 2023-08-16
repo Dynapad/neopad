@@ -105,7 +105,7 @@ struct neopad_renderer_s {
     bgfx_uniform_handle_t uniform_handle;
 
     /// Modules
-    /// @todo Fix this (temporary hack)
+    /// @todo Fix this (temporary hack), re later...: but why?
     neopad_renderer_module_t modules[NEOPAD_RENDERER_MODULE_COUNT];
 };
 

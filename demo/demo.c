@@ -385,7 +385,8 @@ void run(GLFWwindow *window) {
     };
 
     renderer = neopad_renderer_create();
-    neopad_renderer_init(renderer, init);
+    neopad_renderer_await_frame(renderer, 0); // marks this as the render thread
+    neopad_renderer_init(renderer, init);  // marks this as the API thread
 
     while (!glfwWindowShouldClose(window)) {
         draw(window);

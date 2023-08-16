@@ -36,8 +36,9 @@ void on_setup(neopad_renderer_module_background_t this, neopad_renderer_t render
             BGFX_BUFFER_NONE);
 }
 
-void on_teardown(neopad_renderer_module_t module, neopad_renderer_t renderer) {
-    // No teardown required.
+void on_teardown(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
+    bgfx_destroy_index_buffer(this->ibo);
+    bgfx_destroy_vertex_buffer(this->vbo);
 }
 
 void on_begin_frame(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
@@ -83,8 +84,6 @@ void on_end_frame(neopad_renderer_module_background_t this, neopad_renderer_t re
 }
 
 void destroy(neopad_renderer_module_background_t this) {
-    bgfx_destroy_index_buffer(this->ibo);
-    bgfx_destroy_vertex_buffer(this->vbo);
     free(this);
 }
 
