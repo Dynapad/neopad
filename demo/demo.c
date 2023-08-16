@@ -339,7 +339,14 @@ GLFWwindow *setup(int width, int height, demo_state_t *state) {
         exit(EXIT_FAILURE);
     }
 
+    // Set to demo state.
     glfwSetWindowUserPointer(window, state);
+
+    // Set the cursor.
+    GLFWcursor* cursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR);
+    glfwSetCursor(window, cursor);
+
+    // Set callbacks.
     glfwSetKeyCallback(window, key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);

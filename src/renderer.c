@@ -54,9 +54,12 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Initialize BGFX
     bgfx_init_ctor(&this->bgfx_init);
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "Simplify"
     if (BX_PLATFORM_WINDOWS) {
         this->bgfx_init.type = BGFX_RENDERER_TYPE_DIRECT3D9;
     }
+#pragma clang diagnostic pop
     this->bgfx_init.resolution.width = this->init.width;
     this->bgfx_init.resolution.height = this->init.height;
     this->bgfx_init.platformData.nwh = this->init.native_window_handle;
@@ -207,6 +210,8 @@ void neopad_renderer_await_frame(neopad_renderer_t this, int timeout_ms) {
 }
 
 void neopad_renderer_begin_frame(neopad_renderer_t this) {
+    float SMOOTHNESS = 50.0f * this->content_scale;
+
     // Calculate and update delta time.
     const bgfx_stats_t *stats = bgfx_get_stats();
     const double freq = (double) stats->cpuTimerFreq;
@@ -220,25 +225,23 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         bgfx_reset(this->width, this->height, reset_flags, this->bgfx_init.resolution.format);
     }
 
-    // todo: use delta_t here also
     if (!glm_vec2_eqv(this->camera, this->target_camera)) {
-        float smoothness = 10.0f;
         vec2 delta_camera;
         vec2 interp_camera;
         glm_vec2_sub(this->target_camera, this->camera, delta_camera);
-        glm_vec2_scale(delta_camera, delta_t / smoothness, interp_camera);
+        glm_vec2_scale(delta_camera, delta_t / SMOOTHNESS, interp_camera);
         glm_vec2_add(this->camera, interp_camera, interp_camera);
         glm_vec2_copy(interp_camera, this->camera);
     }
 
+    // todo: use delta_t here also
     float zoom_tol = 0.03f;
     if (fabsf(this->zoom - this->target_zoom) < zoom_tol) {
         this->zoom = this->target_zoom;
         this->uniforms.zoom = this->zoom;
     } else {
-        float smoothness = 50.0f * this->content_scale;
         float delta_zoom = this->target_zoom - this->zoom;
-        float interp_zoom = delta_zoom / smoothness;
+        float interp_zoom = delta_zoom * (delta_t / SMOOTHNESS);
         this->zoom += interp_zoom;
         this->uniforms.zoom = this->zoom;
     }
