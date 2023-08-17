@@ -70,3 +70,17 @@ GLFWmonitor *glfwFindWindowMonitor(GLFWwindow* window) {
 
     return best_monitor;
 }
+
+void get_cursor_pos(GLFWwindow *window, float *dest) {
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    dest[0] = (float) x, dest[1] = (float) y;
+}
+
+void get_viewport(GLFWwindow *window, float *dest) {
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+    dest[0] = 0, dest[1] = 0, dest[2] = (float) w, dest[3] = (float) h;
+}
+
+
