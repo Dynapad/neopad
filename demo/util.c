@@ -13,74 +13,20 @@ GLFWmonitor *glfwGetStartupMonitor(void) {
     return monitor_count > 1 ? monitors[1] : NULL;
 }
 
-GLFWmonitor *glfwFindWindowMonitor(GLFWwindow* window) {
-    // Get the window's position and size.
-    neopad_ivec4_t window_rect;
-    glfwGetWindowPos(window, &window_rect.x, &window_rect.y);
-    glfwGetWindowSize(window, &window_rect.w, &window_rect.height);
-
-    // Get the list of monitors.
-    int monitor_count;
-    GLFWmonitor** monitors = glfwGetMonitors(&monitor_count);
-
-    // Get the monitor rects.
-    neopad_ivec4_t monitor_rects[monitor_count];
-    for (int i = 0; i < monitor_count; ++i) {
-        int x, y;
-        glfwGetMonitorPos(monitors[i], &x, &y);
-        const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
-        monitor_rects[i].x = x;
-        monitor_rects[i].y = y;
-        monitor_rects[i].width = mode->width;
-        monitor_rects[i].height = mode->height;
-    }
-
-    // Calculate the overlaps for all monitors.
-    int overlaps[monitor_count];
-
-    for (int i = 0; i < monitor_count; ++i) {
-        neopad_ivec4_t monitor_rect = monitor_rects[i];
-
-        ivec2 delta_pos, size_sum, sum_minus_delta;
-        glm_ivec2_sub(window_rect.pos_vec2, monitor_rect.pos_vec2, delta_pos);
-        glm_ivec2_abs(delta_pos, delta_pos);
-        glm_ivec2_add(window_rect.size_vec2, monitor_rect.size_vec2, size_sum);
-        glm_ivec2_sub(size_sum, delta_pos, sum_minus_delta);
-
-        // Calculate the overlap with clamping.
-        ivec2 overlap, zero = {0, 0};
-        glm_ivec2_sub(size_sum, delta_pos, overlap);
-        glm_ivec2_maxv(overlap, zero, overlap);
-        glm_ivec2_minv(overlap, sum_minus_delta, overlap);
-
-        // Calculate the total overlap.
-        overlaps[i] = overlap[0] * overlap[1];
-    }
-
-    // Find the maximum overlap.
-    int best_overlap = 0;
-    GLFWmonitor *best_monitor = glfwGetPrimaryMonitor();
-
-    for (int i = 0; i < monitor_count; ++i) {
-        if (overlaps[i] > best_overlap) {
-            best_overlap = overlaps[i];
-            best_monitor = monitors[i];
-        }
-    }
-
-    return best_monitor;
-}
-
-void get_cursor_pos(GLFWwindow *window, float *dest) {
+void get_cursor_pos(GLFWwindow *window, neopad_vec2_t *dest) {
     double x, y;
     glfwGetCursorPos(window, &x, &y);
-    dest[0] = (float) x, dest[1] = (float) y;
+    dest->x = (float) x;
+    dest->y = (float) y;
 }
 
-void get_viewport(GLFWwindow *window, float *dest) {
+void get_viewport(GLFWwindow *window, neopad_vec4_t *dest) {
     int w, h;
     glfwGetWindowSize(window, &w, &h);
-    dest[0] = 0, dest[1] = 0, dest[2] = (float) w, dest[3] = (float) h;
+    dest->left = 0;
+    dest->top = 0;
+    dest->right = (float) w;
+    dest->bottom = (float) h;
 }
 
 

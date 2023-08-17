@@ -7,7 +7,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "cglm/vec2.h"
+
+#include <neopad/types.h>
 
 #pragma mark - Types
 
@@ -93,7 +94,7 @@ void neopad_renderer_end_frame(neopad_renderer_t this);
 /// @param viewport The viewport of the window (left, top, right, bottom).
 /// @param p The input point in window coordinates.
 /// @param q The output point in world coordinates.
-void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
+void neopad_renderer_window_to_world(neopad_renderer_const_t this, neopad_vec4_t viewport, neopad_vec2_t p, neopad_vec2_t *q);
 
 /// Convert a point from screen coordinates to world coordinates.
 /// @note This differs from the window-to-world transformation in that it takes the camera position into account.
@@ -101,7 +102,7 @@ void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 vi
 /// @param viewport The viewport of the renderer (left, top, right, bottom).
 /// @param p The input point in window coordinates.
 /// @param q The output point in screen coordinates.
-void neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 p, vec2 q);
+void neopad_renderer_window_to_screen(neopad_renderer_const_t this, neopad_vec4_t viewport, neopad_vec2_t p, neopad_vec2_t *q);
 
 
 #pragma mark - Manipulation
@@ -127,12 +128,12 @@ float neopad_renderer_arrest_zoom(neopad_renderer_t this);
 /// Reposition the viewport of the renderer.
 /// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
-void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dest);
+void neopad_renderer_get_camera(neopad_renderer_const_t this, neopad_vec2_t *dst);
 
 /// Reposition the viewport of the renderer.
 /// @note In world coordinates.
 /// @note Takes effect from the start of the next begun frame.
-void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src);
+void neopad_renderer_set_camera(neopad_renderer_t this, neopad_vec2_t src);
 
 #pragma mark - Drawing
 

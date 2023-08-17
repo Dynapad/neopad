@@ -18,8 +18,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
                 break;
             case GLFW_KEY_SPACE:
-                state->camera[0] = 0;
-                state->camera[1] = 0;
+                state->camera.x = 0;
+                state->camera.y = 0;
                 state->is_dirty.camera = true;
 
                 state->zoom.level = 1;
@@ -59,7 +59,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
                     zoom = state->zoom.level;
                 }
 
-                state->camera[0] = state->camera[1] = 0;
+                state->camera.x = state->camera.y = 0;
                 state->is_dirty.camera = true;
 
                 state->zoom.level = zoom;
@@ -86,17 +86,18 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         if (action == GLFW_PRESS) {
             state->cursor.is_down = true;
 
-            vec4 viewport;
-            get_viewport(window, viewport);
+            neopad_vec4_t viewport;
+            get_viewport(window, &viewport);
 
-            vec2 cursor_pos;
-            get_cursor_pos(window, cursor_pos);
+            neopad_vec2_t cursor_pos;
+            get_cursor_pos(window, &cursor_pos);
 
-            // SAve the cursor position converted to screen coords.
-            neopad_renderer_window_to_screen(state->renderer, viewport, cursor_pos, state->drag.from);
+            // todo: is viewport.vec[0] going from 0 to 4.29259...?
+            // Save the cursor position converted to screen coords.
+            neopad_renderer_window_to_screen(state->renderer, viewport, cursor_pos, &state->drag.from);
 
             // Save the starting camera position.
-            neopad_renderer_get_camera(state->renderer, state->drag.from_camera);
+            neopad_renderer_get_camera(state->renderer, &state->drag.from_camera);
         } else if (action == GLFW_RELEASE) {
             state->cursor.is_down = false;
         }
@@ -107,18 +108,18 @@ void cursor_position_callback(GLFWwindow *window, double x, double y) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
     if (state->cursor.is_down) {
-        get_cursor_pos(window, state->drag.to);
+        get_cursor_pos(window, &state->drag.to);
 
-        vec4 viewport;
-        get_viewport(window, viewport);
+        neopad_vec4_t viewport;
+        get_viewport(window, &viewport);
         neopad_renderer_window_to_screen(
                 state->renderer, viewport,
-                state->drag.to, state->drag.to
+                state->drag.to, &state->drag.to
         );
 
         vec2 drag_delta; // in screen coords
-        glm_vec2_sub(state->drag.to, state->drag.from, drag_delta);
-        glm_vec2_add(state->drag.from_camera, drag_delta, state->camera);
+        glm_vec2_sub(state->drag.to.vec, state->drag.from.vec, drag_delta);
+        glm_vec2_add(state->drag.from_camera.vec, drag_delta, state->camera.vec);
         state->is_dirty.camera = true;
     }
 }
@@ -148,7 +149,7 @@ void window_size_callback(GLFWwindow *window, int width, int height) {
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
-    glm_ivec2_copy((ivec2) {width, height}, state->size);
+    glm_ivec2_copy((ivec2) {width, height}, state->size.vec);
     state->is_dirty.size = true;
     draw(window); // force draw now for a smooth resize (no jump on release)
 }

@@ -134,45 +134,51 @@ void neopad_renderer_destroy(neopad_renderer_t this) {
 
 #pragma mark - Coordinate Transformations
 
-void neopad_renderer_window_to_world(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+void neopad_renderer_window_to_world(neopad_renderer_const_t this,
+                                     const neopad_vec4_t viewport,
+                                     const neopad_vec2_t p,
+                                     neopad_vec2_t *q) {
     // Create the transforms we need.
     mat4 viewport_to_ndc;
     mat4 inv_model_view;
     mat4 inv_proj;
-    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
+    glm_ortho(viewport.left, viewport.right, viewport.bottom, viewport.top, -1.0f, 1.0f, viewport_to_ndc);
 
     glm_mat4_inv(this->model_view, inv_model_view);
     glm_mat4_inv(this->proj, inv_proj);
 
-    vec4 v = {window[0], window[1], 0.0f, 1.0f};
+    vec4 v = {p.x, p.y, 0.0f, 1.0f};
     vec4 w;
 
     glm_mat4_mulv(viewport_to_ndc, v, w);
     glm_mat4_mulv(inv_proj, w, w);
     glm_mat4_mulv(inv_model_view, w, w);
 
-    glm_vec2_copy((vec2) {w[0], w[1]}, world);
+    glm_vec2_copy((vec2) {w[0], w[1]}, q->vec);
 }
 
 void
-neopad_renderer_window_to_screen(neopad_renderer_const_t this, const vec4 viewport, const vec2 window, vec2 world) {
+neopad_renderer_window_to_screen(neopad_renderer_const_t this,
+                                 const neopad_vec4_t viewport,
+                                 const neopad_vec2_t p,
+                                 neopad_vec2_t *q) {
     // Create the transforms we need.
     mat4 viewport_to_ndc;
     mat4 inv_model;
     mat4 inv_proj;
-    glm_ortho(viewport[0], viewport[2], viewport[3], viewport[1], -1.0f, 1.0f, viewport_to_ndc);
+    glm_ortho(viewport.left, viewport.right, viewport.bottom, viewport.top, -1.0f, 1.0f, viewport_to_ndc);
 
     glm_mat4_inv(this->model, inv_model);
     glm_mat4_inv(this->proj, inv_proj);
 
-    vec4 v = {window[0], window[1], 0.0f, 1.0f};
+    vec4 v = {p.x, p.y, 0.0f, 1.0f};
     vec4 w;
 
     glm_mat4_mulv(viewport_to_ndc, v, w);
     glm_mat4_mulv(inv_proj, w, w);
     glm_mat4_mulv(inv_model, w, w);
 
-    glm_vec2_copy((vec2) {w[0], w[1]}, world);
+    glm_vec2_copy((vec2) {w[0], w[1]}, q->vec);
 }
 
 #pragma mark - Manipualtion
@@ -195,12 +201,12 @@ float neopad_renderer_arrest_zoom(neopad_renderer_t this) {
     return this->zoom;
 }
 
-void neopad_renderer_get_camera(neopad_renderer_const_t this, vec2 dst) {
-    glm_vec2_copy(this->camera, dst);
+void neopad_renderer_get_camera(neopad_renderer_const_t this, neopad_vec2_t *dst) {
+    glm_vec2_copy(this->camera, dst->vec);
 }
 
-void neopad_renderer_set_camera(neopad_renderer_t this, vec2 src) {
-    glm_vec2_copy(src, this->target_camera);
+void neopad_renderer_set_camera(neopad_renderer_t this, neopad_vec2_t src) {
+    glm_vec2_copy(src.vec, this->target_camera);
 }
 
 #pragma mark - Frames

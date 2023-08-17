@@ -6,6 +6,7 @@
 #define NEOPAD_DEMO_H
 
 #include "platform.h"
+#include <neopad/types.h>
 #include <neopad/renderer.h>
 
 /** GLFW callbacks: demo_input.c */
@@ -26,7 +27,7 @@ typedef struct {
     neopad_renderer_t renderer;
 
     // Window size and content scale.
-    ivec2 size;
+    neopad_ivec2_t size;
     float content_scale;
 
     /// Flags for what needs to be updated next loop.
@@ -45,11 +46,11 @@ typedef struct {
     } is_dirty;
 
     /// Last known camera position.
-    vec2 camera;
+    neopad_vec2_t camera;
 
     /// Last known cursor details.
     struct {
-        vec2 pos;
+        neopad_ivec2_t pos;
         bool is_down;
     } cursor;
 
@@ -58,21 +59,18 @@ typedef struct {
         bool is_active;
 
         /// Last known windowed position and size (e.g. to return to after fullscreen)
-        struct {
-            ivec2 pos;
-            ivec2 size;
-        } saved_window;
+        neopad_ivec4_t saved_window;
     } fullscreen;
 
     struct {
         /// Is the user dragging the mouse?
         bool is_dragging;
         /// Window coordinates of the drag start.
-        vec2 from;
+        neopad_vec2_t from;
         /// Window coordinates of the drag end.
-        vec2 to;
+        neopad_vec2_t to;
         /// Initial camera position to offset from.
-        vec2 from_camera;
+        neopad_vec2_t from_camera;
     } drag;
 
     struct {

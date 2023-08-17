@@ -34,6 +34,10 @@
 #define IF_3_VEC_PAIR(...)
 #define IF_4_VEC_PAIR(...) __VA_ARGS__
 
+#define IF_2_RECT(...)
+#define IF_3_RECT(...)
+#define IF_4_RECT(...) __VA_ARGS__
+
 #define NEOPAD_VEC_TYPE(__scalar, __glm, __n)              \
     typedef union {                                        \
         /* As a CGLM vector. */                            \
@@ -62,6 +66,13 @@
             __scalar width;                                \
             __scalar height;                               \
             IF_##__n##_DEPTH(__scalar depth;)              \
+        };)                                                \
+        /* vec4: (left, top, right, bottom) */             \
+        IF_##__n##_RECT(struct {                           \
+            __scalar left;                                 \
+            __scalar top;                                  \
+            __scalar right;                                \
+            __scalar bottom;                               \
         };)                                                \
     } neopad_##__glm##__n##_t;                             \
     /* Avoid any gotchas with alignment or padding. */     \

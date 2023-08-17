@@ -25,7 +25,7 @@ GLFWwindow *setup_glfw(int width, int height, demo_state_t *state) {
     }
 
     // Get the window size and content scale.
-    glfwGetFramebufferSize(window, &state->size[0], &state->size[1]);
+    glfwGetFramebufferSize(window, &state->size.width, &state->size.height);
     glfwGetWindowContentScale(window, &state->content_scale, NULL);
 
     // Set to demo state.
@@ -55,8 +55,8 @@ void setup_neopad(GLFWwindow *window) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
     neopad_renderer_init_t init = {
-            .width = state->size[0],
-            .height = state->size[1],
+            .width = state->size.width,
+            .height = state->size.height,
             .content_scale = state->content_scale,
             .debug = true,
             .native_window_handle = demo_get_native_window_handle(window),
@@ -85,18 +85,17 @@ void enter_fullscreen(GLFWwindow *window) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
     // Save the window position and size.
-    int *pos = state->fullscreen.saved_window.pos;
-    int *size = state->fullscreen.saved_window.size;
-    glfwGetWindowPos(window, &pos[0], &pos[1]);
-    glfwGetWindowSize(window, &size[0], &size[1]);
+    neopad_ivec4_t *saved_window = &state->fullscreen.saved_window;
+    glfwGetWindowPos(window, &saved_window->x, &saved_window->y);
+    glfwGetWindowSize(window, &saved_window->width, &saved_window->height);
 
     // Get the current monitor and its details.
-    GLFWmonitor *monitor = glfwFindWindowMonitor(window); // note: custom function in util.h
+    GLFWmonitor *monitor = glfwGetStartupMonitor(); // note: custom function in util.h
     const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 
     // Resize the renderer.
-    state->size[0] = mode->width;
-    state->size[1] = mode->height;
+    state->size.width = mode->width;
+    state->size.height = mode->height;
     state->is_dirty.size = true;
     draw(window); // force draw now for nicer transition
 
@@ -107,13 +106,12 @@ void enter_fullscreen(GLFWwindow *window) {
 void exit_fullscreen(GLFWwindow *window) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
-    int *pos = &state->fullscreen.saved_window.pos[0];
-    int *size = &state->fullscreen.saved_window.size[0];
+    neopad_ivec4_t *saved_window = &state->fullscreen.saved_window;
 
-    neopad_renderer_resize(state->renderer, size[0], size[1]);
+    neopad_renderer_resize(state->renderer, saved_window->width, saved_window->height);
     glfwSetWindowMonitor(window, NULL,
-                         pos[0], pos[1],
-                         size[0], size[1],
+                         saved_window->x, saved_window->y,
+                         saved_window->width, saved_window->height,
                          GLFW_DONT_CARE);
     state->is_dirty.fullscreen = false;
 }
@@ -147,7 +145,7 @@ void update(GLFWwindow *window) {
 
     // Check each dirty flag and update the renderer correspondingly.
     if (state->is_dirty.size) {
-        neopad_renderer_resize(state->renderer, state->size[0], state->size[1]);
+        neopad_renderer_resize(state->renderer, state->size.width, state->size.height);
         state->is_dirty.size = false;
     }
 
@@ -178,7 +176,7 @@ void draw(GLFWwindow *window) {
     neopad_renderer_end_frame(renderer);
 
     // Save the resulting camera position.
-    neopad_renderer_get_camera(renderer, state->camera);
+    neopad_renderer_get_camera(renderer, &state->camera);
 }
 
 const int W = 1200;
@@ -189,8 +187,8 @@ int main() {
     memset(&state, 0, sizeof(demo_state_t));
 
     // Initialize the camera.
-    state.camera[0] = 0.0f;
-    state.camera[1] = 0.0f;
+    state.camera.x = 0.0f;
+    state.camera.y = 0.0f;
 
     state.zoom.level = 1.0f;
     state.zoom.min_level = 0.1f;
