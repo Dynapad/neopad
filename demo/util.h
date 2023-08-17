@@ -5,6 +5,8 @@
 #include "cglm/vec2.h"
 #include "cglm/vec4.h"
 
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
 /// Gets the second display (if any), otherwise NULL.
 GLFWmonitor *glfwGetStartupMonitor(void);
 

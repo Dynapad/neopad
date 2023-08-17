@@ -6,10 +6,8 @@
 #ifndef NEOPAD_DEMO_PLATFORM_H
 #define NEOPAD_DEMO_PLATFORM_H
 
-/**
- * 1. Use the BX platform header to determine the platform we're on, and enable
- * the appropriate GLFW defines to whitelist.
- */
+
+/** 1. Use the BX platform header to configure by the platform we're on. */
 
 #include <bx/platform.h>
 
@@ -29,13 +27,13 @@
 #	define GLFW_EXPOSE_NATIVE_WGL
 #endif
 
-/**
- * 2. Include GLFW and GLFW native headers, but just what we need.
- */
+/** 2. Include GLFW and GLFW native headers, but just what we need. All of CGLM! */
 
 #define GLFW_INCLUDE_NONE
-#include "../cmake-build-debug/_deps/glfw-src/include/GLFW/glfw3.h"
-#include "../cmake-build-debug/_deps/glfw-src/include/GLFW/glfw3native.h"
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+#include <cglm/cglm.h>
 
 static void *demo_get_native_window_handle(GLFWwindow *window) {
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD

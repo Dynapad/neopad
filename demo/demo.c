@@ -5,207 +5,6 @@
 
 #include <neopad/renderer.h>
 
-/**
- * Demo app state. Everything goes in here.
- */
-typedef struct {
-    neopad_renderer_t renderer;
-    GLFWwindow *window;
-
-    /// Last known cursor position.
-    struct {
-        vec2 pos;
-        bool is_down;
-    } cursor;
-
-    /// Last known window size (e.g. to return to after fullscreen)
-    struct {
-
-    } windowed;
-
-    struct {
-        /// Are we in fullscreen mode?
-        bool is_active;
-
-        /// Last known window position and size (e.g. to return to after fullscreen)
-        struct {
-            ivec2 pos;
-            ivec2 size;
-        } saved_window;
-    } fullscreen;
-
-    struct {
-        /// Is the user dragging the mouse?
-        bool is_dragging;
-        /// Window coordinates of the drag start.
-        vec2 from;
-        /// Window coordinates of the drag end.
-        vec2 to;
-        /// Initial camera position to offset from.
-        vec2 from_camera;
-    } drag;
-
-    struct {
-        /// Is the user zooming?
-        bool is_zooming;
-
-        /// Current zoom level.
-        float level;
-
-        // Maximum and minimum (config).
-        float max_level;
-        float min_level;
-
-        // Zoom factor (config).
-        float scroll_factor;
-    } zoom;
-} demo_state_t;
-
-#pragma mark - GLFW Callbacks
-
-void error_callback(int error, const char *description) {
-    eprintf("GLFW Error: %s\n", description);
-}
-
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    if (action == GLFW_PRESS) {
-        switch (key) {
-            case GLFW_KEY_ESCAPE:
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-                break;
-            case GLFW_KEY_SPACE:
-                neopad_renderer_set_camera(state->renderer, (vec2) {0, 0});
-                neopad_renderer_zoom(state->renderer, 1);
-                break;
-            case GLFW_KEY_1:
-            case GLFW_KEY_2:
-            case GLFW_KEY_3:
-            case GLFW_KEY_4:
-            case GLFW_KEY_5:
-            case GLFW_KEY_6:
-            case GLFW_KEY_7:
-            case GLFW_KEY_8:
-            case GLFW_KEY_9:
-            case GLFW_KEY_0: {
-                // The numeric keys correspond to zoom level "stops" above and below 1:1.
-                //
-                // There are 17 stops, arranged like:
-                // 0, 9, 8, ... , 3, 2, 1/Shift-1, Shift-2, Shift-3, ..., Shift-8, Shift-9, Shift-0
-                //
-                // To zoom in, use the numbers 2-9, with 0 zooming all the way in.
-                // To zoom out, use the numbers 2-9, with 0 zooming all the way out.
-                // Both 1 and Shift-1 behave identically.
-
-                int n = key - GLFW_KEY_0;
-                float zoom = (float) n;
-                bool mod_shift = mods & GLFW_MOD_SHIFT;
-
-                if (n == 0) {
-                    zoom = mod_shift ? state->zoom.min_level : state->zoom.max_level;
-                } else if (n == 1) {
-                    zoom = 1;
-                } else if (n <= 9) {
-                    zoom = mod_shift ? 1.0f / zoom : zoom;
-                }
-
-                neopad_renderer_set_camera(state->renderer, (vec2) {0, 0});
-                neopad_renderer_zoom(state->renderer, zoom);
-
-                break;
-            }
-            case GLFW_KEY_F:
-                toggle_fullscreen(window);
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        neopad_renderer_arrest_zoom(state->renderer);
-        if (action == GLFW_PRESS) {
-            state->cursor.is_down = true;
-
-            vec4 viewport;
-            get_viewport(window, viewport);
-            get_cursor_pos(window, state->drag.from);
-
-            // Convert the cursor position to screen coordinates.
-            neopad_renderer_window_to_screen(state->renderer, viewport,
-                                             state->drag.from, state->drag.from);
-
-            // Save the starting camera position.
-            neopad_renderer_get_camera(state->renderer, state->drag.from_camera);
-        } else if (action == GLFW_RELEASE) {
-            state->cursor.is_down = false;
-        }
-    }
-}
-
-void cursor_position_callback(GLFWwindow *window, double x, double y) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    if (state->cursor.is_down) {
-        get_cursor_pos(window, state->drag.to);
-
-        vec4 viewport;
-        get_viewport(window, viewport);
-        neopad_renderer_window_to_screen(state->renderer, viewport, state->drag.to, state->drag.from);
-
-        vec2 drag_delta;
-        glm_vec2_sub(state->drag.to, state->drag.from, drag_delta);
-
-        vec2 camera;
-        glm_vec2_add(state->drag.from_camera, drag_delta, camera);
-        neopad_renderer_set_camera(state->renderer, camera);
-    }
-}
-
-void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    // Adjust the zoom level logarithmically.
-    if (y_offset > 0)
-        state->zoom.level *= powf(state->zoom.scroll_factor, (float) y_offset);
-    else if (y_offset < 0)
-        state->zoom.level /= powf(state->zoom.scroll_factor, (float) -y_offset);
-
-    // Clamp zoom betwixt 0.1 and 10.0.
-    state->zoom.level = glm_clamp(state->zoom.level,
-                                  state->zoom.min_level,
-                                  state->zoom.max_level);
-    neopad_renderer_zoom(state->renderer, state->zoom.level);
-}
-
-void window_size_callback(GLFWwindow *window, int width, int height) {
-
-}
-
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    if (state->renderer == NULL) return;
-    neopad_renderer_resize(state->renderer, width, height);
-    draw(window);
-}
-
-void window_content_scale_callback(GLFWwindow *window, float xscale, float yscale) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    if (state->renderer == NULL) return;
-    printf("Content scale: %f, %f\n", xscale, yscale);
-    neopad_renderer_rescale(state->renderer, xscale);
-    draw(window);
-}
-
-#pragma mark - Setup / Teardown
-
 GLFWwindow *setup_glfw(int width, int height, demo_state_t *state) {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
@@ -225,6 +24,10 @@ GLFWwindow *setup_glfw(int width, int height, demo_state_t *state) {
         exit(EXIT_FAILURE);
     }
 
+    // Get the window size and content scale.
+    glfwGetFramebufferSize(window, &state->size[0], &state->size[1]);
+    glfwGetWindowContentScale(window, &state->content_scale, NULL);
+
     // Set to demo state.
     glfwSetWindowUserPointer(window, state);
 
@@ -238,7 +41,7 @@ GLFWwindow *setup_glfw(int width, int height, demo_state_t *state) {
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetWindowContentScaleCallback(window, window_content_scale_callback);
+    glfwSetWindowContentScaleCallback(window, content_scale_callback);
 
     return window;;
 }
@@ -251,16 +54,10 @@ void teardown_glfw(GLFWwindow *window) {
 void setup_neopad(GLFWwindow *window) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
-    int width, height;
-    float content_scale = 1.0f;
-
-    glfwGetFramebufferSize(window, &width, &height);
-    glfwGetWindowContentScale(window, &content_scale, NULL);
-
     neopad_renderer_init_t init = {
-            .width = width,
-            .height = height,
-            .content_scale = content_scale,
+            .width = state->size[0],
+            .height = state->size[1],
+            .content_scale = state->content_scale,
             .debug = true,
             .native_window_handle = demo_get_native_window_handle(window),
             .native_display_type = demo_get_native_display_type(window),
@@ -284,44 +81,10 @@ void teardown_neopad(GLFWwindow *window) {
     neopad_renderer_destroy(state->renderer);
 }
 
-void run(GLFWwindow *window) {
-    setup_neopad(window);
-
-    while (!glfwWindowShouldClose(window)) {
-        draw(window);
-        glfwPollEvents();
-    }
-
-    teardown_neopad(window);
-}
-
-void draw(GLFWwindow *window) {
+void enter_fullscreen(GLFWwindow *window) {
     demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
 
-    neopad_renderer_begin_frame(state->renderer);
-    neopad_renderer_draw_background(state->renderer);
-    neopad_renderer_draw_test_rect(state->renderer, -100, 100, 100, -100);
-    neopad_renderer_end_frame(state->renderer);
-}
-
-void toggle_fullscreen(GLFWwindow *window) {
-    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
-
-    // If we're already in fullscreen mode, exit it.
-    if (state->fullscreen.is_active) {
-        int *pos = &state->fullscreen.saved_window.pos[0];
-        int *size = &state->fullscreen.saved_window.size[0];
-
-        neopad_renderer_resize(state->renderer, size[0], size[1]);
-        glfwSetWindowMonitor(window, NULL,
-                             pos[0], pos[1],
-                             size[0], size[1],
-                             GLFW_DONT_CARE);
-        state->fullscreen.is_active = false;
-        return;
-    }
-
-    // Otherwise, save the window position and size.
+    // Save the window position and size.
     int *pos = state->fullscreen.saved_window.pos;
     int *size = state->fullscreen.saved_window.size;
     glfwGetWindowPos(window, &pos[0], &pos[1]);
@@ -332,20 +95,112 @@ void toggle_fullscreen(GLFWwindow *window) {
     const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 
     // Resize the renderer.
-    neopad_renderer_resize(state->renderer, mode->width, mode->height);
+    state->size[0] = mode->width;
+    state->size[1] = mode->height;
+    state->is_dirty.size = true;
+    draw(window); // force draw now for nicer transition
 
-    // Switch to fullscreen mode.
     glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-    state->fullscreen.is_active = true;
+    state->is_dirty.fullscreen = false;
 }
+
+void exit_fullscreen(GLFWwindow *window) {
+    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
+
+    int *pos = &state->fullscreen.saved_window.pos[0];
+    int *size = &state->fullscreen.saved_window.size[0];
+
+    neopad_renderer_resize(state->renderer, size[0], size[1]);
+    glfwSetWindowMonitor(window, NULL,
+                         pos[0], pos[1],
+                         size[0], size[1],
+                         GLFW_DONT_CARE);
+    state->is_dirty.fullscreen = false;
+}
+
+void run(GLFWwindow *window) {
+    setup_neopad(window);
+
+    while (!glfwWindowShouldClose(window)) {
+        update(window);
+        draw(window);
+        glfwPollEvents();
+    }
+
+    teardown_neopad(window);
+}
+
+void update(GLFWwindow *window) {
+    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
+
+    // Early exit if nothing is dirty.
+    if (state->is_dirty.any == 0) return;
+
+    // Check fullscreen first, as it may affect other flags.
+    if (state->is_dirty.fullscreen) {
+        if (state->fullscreen.is_active) {
+            enter_fullscreen(window);
+        } else {
+            exit_fullscreen(window);
+        }
+    }
+
+    // Check each dirty flag and update the renderer correspondingly.
+    if (state->is_dirty.size) {
+        neopad_renderer_resize(state->renderer, state->size[0], state->size[1]);
+        state->is_dirty.size = false;
+    }
+
+    if (state->is_dirty.content_scale) {
+        neopad_renderer_rescale(state->renderer, state->content_scale);
+        state->is_dirty.content_scale = false;
+    }
+
+    if (state->is_dirty.camera) {
+        neopad_renderer_set_camera(state->renderer, state->camera);
+        state->is_dirty.camera = false;
+    }
+
+    if (state->is_dirty.zoom) {
+        neopad_renderer_zoom(state->renderer, state->zoom.level);
+        state->is_dirty.zoom = false;
+    }
+}
+
+void draw(GLFWwindow *window) {
+    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
+    neopad_renderer_t renderer = state->renderer;
+
+    // Draw a frame.
+    neopad_renderer_begin_frame(renderer);
+    neopad_renderer_draw_background(renderer);
+    neopad_renderer_draw_test_rect(renderer, -100, 100, 100, -100);
+    neopad_renderer_end_frame(renderer);
+
+    // Save the resulting camera position.
+    neopad_renderer_get_camera(renderer, state->camera);
+}
+
+const int W = 1200;
+const int H = 800;
 
 int main() {
     demo_state_t state;
+    memset(&state, 0, sizeof(demo_state_t));
+
+    // Initialize the camera.
+    state.camera[0] = 0.0f;
+    state.camera[1] = 0.0f;
+
+    state.zoom.level = 1.0f;
     state.zoom.min_level = 0.1f;
     state.zoom.max_level = 10.0f;
     state.zoom.scroll_factor = 1.2f; // 1.0 scroll = 20% zoom
 
-    GLFWwindow *window = setup_glfw(1200, 800, &state);
+    // Set everything as dirty.
+    state.is_dirty.any = 0xF;
+
+    GLFWwindow *window = setup_glfw(W, H, &state);
     run(window);
     teardown_glfw(window);
     return EXIT_SUCCESS;
