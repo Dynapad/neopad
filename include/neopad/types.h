@@ -3,68 +3,101 @@
 #ifndef NEOPAD_TYPES_H
 #define NEOPAD_TYPES_H
 
-#include "cglm/vec4.h"
+#include <cglm/vec2.h>
+#include <cglm/vec3.h>
+#include <cglm/vec4.h>
+#include <cglm/ivec2.h>
+#include <cglm/ivec3.h>
+#include <cglm/ivec4.h>
 
-/// @brief A 4D vector, used for colors, positions, etc.
-/// Provides several different ways to access the same data,
-/// depending on what makes the most sense for the context.
-///
-/// @note the `w` component is aliased to `zoom` for convenience.
-typedef union {
-    vec4 vec;
-    struct {
-        float x;
-        float y;
-        float z;
-        union {
-            float w;
-            float zoom;
-        };
-    };
-    struct {
-        struct {
-            float x;
-            float y;
-        } pos;
-        struct {
-            float w;
-            float h;
-        } size;
-    };
-    struct {
-        vec2 vpos;
-        vec2 vsize;
-    };
-} neopad_vec_t;
+#define IF_2_Z(...)
+#define IF_3_Z(...) __VA_ARGS__
+#define IF_4_Z(...) __VA_ARGS__
 
-/// @brief Like neopad_vec_t, but integers.
+#define IF_2_W(...)
+#define IF_3_W(...)
+#define IF_4_W(...) __VA_ARGS__
+
+#define IF_2_POS(...) __VA_ARGS__
+#define IF_3_POS(...) __VA_ARGS__
+#define IF_4_POS(...) __VA_ARGS__
+
+#define IF_2_SIZE(...) __VA_ARGS__
+#define IF_3_SIZE(...)
+#define IF_4_SIZE(...)
+
+#define IF_2_DEPTH(...)
+#define IF_3_DEPTH(...) __VA_ARGS__
+#define IF_4_DEPTH(...) __VA_ARGS__
+
+#define IF_2_VEC_PAIR(...)
+#define IF_3_VEC_PAIR(...)
+#define IF_4_VEC_PAIR(...) __VA_ARGS__
+
+#define NEOPAD_VEC_TYPE(__scalar, __glm, __n)              \
+    typedef union {                                        \
+        /* As a CGLM vector. */                            \
+        __glm##__n vec;                                    \
+        /* As a pair of CGLM vectors. */                   \
+        IF_##__n##_VEC_PAIR(struct {                       \
+            __glm##2 pos_vec2;                             \
+            __glm##2 size_vec2;                            \
+        };)                                                \
+        /* vec2/3/4: (x, y, [z, [w]]) */                   \
+        struct {                                           \
+            __scalar x;                                    \
+            __scalar y;                                    \
+            IF_##__n##_Z(union {                           \
+                __scalar z;                                \
+                __scalar width;                            \
+            });                                            \
+            IF_##__n##_W(union {                           \
+                __scalar w;                                \
+                __scalar height;                           \
+                __scalar zoom;                             \
+            });                                            \
+        };                                                 \
+        /* vec2/3: (width, height, [depth]) */             \
+        IF_##__n##_SIZE(struct {                           \
+            __scalar width;                                \
+            __scalar height;                               \
+            IF_##__n##_DEPTH(__scalar depth;)              \
+        };)                                                \
+    } neopad_##__glm##__n##_t;                             \
+    /* Avoid any gotchas with alignment or padding. */     \
+    _Static_assert(                                        \
+        sizeof(neopad_##__glm##__n##_t) == sizeof(__glm##__n), \
+        "neopad_" #__glm #__n "_t is not the same size as " #__glm #__n \
+    )
+
+NEOPAD_VEC_TYPE(int, ivec, 2);
+NEOPAD_VEC_TYPE(int, ivec, 3);
+NEOPAD_VEC_TYPE(int, ivec, 4);
+NEOPAD_VEC_TYPE(float, vec, 2);
+NEOPAD_VEC_TYPE(float, vec, 3);
+NEOPAD_VEC_TYPE(float, vec, 4);
+
+///* vec4 (x, y, width, height) */                   \
+//IF_##_width##_POS_SIZE(struct {                    \
+//    __scalar x;                                    \
+//    __scalar y;                                    \
+//    __scalar width;                                \
+//    __scalar height;                               \
+//};)                                                \
+
 typedef union {
-    ivec4 vec;
+    uint32_t abgr;
     struct {
-        int32_t x;
-        int32_t y;
-        int32_t z;
-        int32_t w;
+        uint8_t a;
+        uint8_t b;
+        uint8_t g;
+        uint8_t r;
     };
-    struct {
-        struct {
-            int32_t x;
-            int32_t y;
-        } pos;
-        struct {
-            int32_t w;
-            int32_t h;
-        } size;
-    };
-    struct {
-        ivec2 vpos;
-        ivec2 vsize;
-    };
-} neopad_ivec_t;
+} neopad_color_t;
 
 typedef struct {
-    neopad_vec_t position;
-    uint32_t color;
+    neopad_vec4_t position;
+    neopad_color_t color;
 } neopad_vertex_t;
 
 #endif

@@ -15,36 +15,36 @@ GLFWmonitor *glfwGetStartupMonitor(void) {
 
 GLFWmonitor *glfwFindWindowMonitor(GLFWwindow* window) {
     // Get the window's position and size.
-    neopad_ivec_t window_rect;
-    glfwGetWindowPos(window, &window_rect.pos.x, &window_rect.pos.y);
-    glfwGetWindowSize(window, &window_rect.size.w, &window_rect.size.h);
+    neopad_ivec4_t window_rect;
+    glfwGetWindowPos(window, &window_rect.x, &window_rect.y);
+    glfwGetWindowSize(window, &window_rect.w, &window_rect.height);
 
     // Get the list of monitors.
     int monitor_count;
     GLFWmonitor** monitors = glfwGetMonitors(&monitor_count);
 
     // Get the monitor rects.
-    neopad_ivec_t monitor_rects[monitor_count];
+    neopad_ivec4_t monitor_rects[monitor_count];
     for (int i = 0; i < monitor_count; ++i) {
         int x, y;
         glfwGetMonitorPos(monitors[i], &x, &y);
         const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
-        monitor_rects[i].pos.x = x;
-        monitor_rects[i].pos.y = y;
-        monitor_rects[i].size.w = mode->width;
-        monitor_rects[i].size.h = mode->height;
+        monitor_rects[i].x = x;
+        monitor_rects[i].y = y;
+        monitor_rects[i].width = mode->width;
+        monitor_rects[i].height = mode->height;
     }
 
     // Calculate the overlaps for all monitors.
     int overlaps[monitor_count];
 
     for (int i = 0; i < monitor_count; ++i) {
-        neopad_ivec_t monitor_rect = monitor_rects[i];
+        neopad_ivec4_t monitor_rect = monitor_rects[i];
 
         ivec2 delta_pos, size_sum, sum_minus_delta;
-        glm_ivec2_sub(window_rect.vpos, monitor_rect.vpos, delta_pos);
+        glm_ivec2_sub(window_rect.pos_vec2, monitor_rect.pos_vec2, delta_pos);
         glm_ivec2_abs(delta_pos, delta_pos);
-        glm_ivec2_add(window_rect.vsize, monitor_rect.vsize, size_sum);
+        glm_ivec2_add(window_rect.size_vec2, monitor_rect.size_vec2, size_sum);
         glm_ivec2_sub(size_sum, delta_pos, sum_minus_delta);
 
         // Calculate the overlap with clamping.
