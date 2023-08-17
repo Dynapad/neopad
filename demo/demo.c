@@ -142,7 +142,11 @@ typedef struct {
         bool is_zooming;
 
         /// Current zoom level.
-        float zoom;
+        float level;
+
+        // Maximum and minimum (config).
+        float max_level;
+        float min_level;
     } zoom;
 } demo_state_t;
 
@@ -223,6 +227,42 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
                 neopad_renderer_set_camera(renderer, (vec2) {0, 0});
                 neopad_renderer_zoom(renderer, 1);
                 break;
+            case GLFW_KEY_1:
+            case GLFW_KEY_2:
+            case GLFW_KEY_3:
+            case GLFW_KEY_4:
+            case GLFW_KEY_5:
+            case GLFW_KEY_6:
+            case GLFW_KEY_7:
+            case GLFW_KEY_8:
+            case GLFW_KEY_9:
+            case GLFW_KEY_0: {
+                // The numeric keys correspond to zoom level "stops" above and below 1:1.
+                //
+                // There are 17 stops, arranged like:
+                // 9, 8, 7, 6, 5, 4, 3, 2, 1, Shift-2, Shift-3, Shift-4, Shift-5, etc
+                //
+                // To zoom in, use the numbers 2-9, with 0 zooming all the way in.
+                // To zoom out, use the numbers 2-9, with 0 zooming all the way out.
+                // Both 1 and Shift-1 behave identically.
+
+                int n = key - GLFW_KEY_0;
+                float zoom = (float) n;
+                bool mod_shift = mods & GLFW_MOD_SHIFT;
+
+                if (n == 0) {
+                    zoom = mod_shift ? state->zoom.min_level : state->zoom.max_level;
+                } else if (n == 1) {
+                    zoom = 1;
+                } else if (n <= 9) {
+                    zoom = mod_shift ? 1.0f / zoom : zoom;
+                }
+
+                neopad_renderer_set_camera(renderer, (vec2) {0, 0});
+                neopad_renderer_zoom(renderer, zoom);
+
+                break;
+            }
             case GLFW_KEY_F:
                 toggle_fullscreen(window);
                 break;
@@ -272,30 +312,32 @@ static double dead_zone = 5.0;
 static double last_y_offset = 0.0;
 
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
+    demo_state_t *state = (demo_state_t *) glfwGetWindowUserPointer(window);
+
     // If the direction of the scroll changed, arrest any ongoing zoom,
     // even if it's in the dead zone.
     bool dir_changed = last_y_offset * y_offset < 0;
     bool in_dead_zone = fabs(y_offset) < dead_zone;
 
-    if (dir_changed) {
-        printf("dir changed\n");
-        zoom = neopad_renderer_arrest_zoom(renderer);
-        last_y_offset = y_offset;
-    }
-
-    // If we're in the dead zone, do nothing.
-    // The dead zone is 3x as large if we just arrested the zoom.
-    if (fabs(y_offset) < dead_zone * (3 * dir_changed)) {
-        printf("dead zone %f\n", fabs(y_offset));
-        return;
-    }
+//    if (dir_changed) {
+//        printf("dir changed\n");
+//        state->zoom.level = neopad_renderer_arrest_zoom(renderer);
+//        last_y_offset = y_offset;
+//    }
+//
+//    // If we're in the dead zone, do nothing.
+//    // The dead zone is 3x as large if we just arrested the zoom.
+//    if (fabs(y_offset) < dead_zone * (3 * dir_changed)) {
+//        printf("dead zone %f\n", fabs(y_offset));
+//        return;
+//    }
 
     // Adjust the zoom level logarithmically.
     if (y_offset > 0) zoom *= powf(ZOOM_FACTOR, (float) y_offset);
     else if (y_offset < 0) zoom /= powf(ZOOM_FACTOR, (float) -y_offset);
 
     // Clamp zoom betwixt 0.1 and 10.0.
-    zoom = glm_clamp(zoom, 0.1f, 10.0f);
+    zoom = glm_clamp(zoom, state->zoom.min_level, state->zoom.max_level);
     neopad_renderer_zoom(renderer, zoom);
 
     last_y_offset = y_offset;
@@ -406,6 +448,8 @@ void run(GLFWwindow *window) {
 
 int main() {
     demo_state_t state;
+    state.zoom.min_level = 0.1f;
+    state.zoom.max_level = 10.0f;
 
     GLFWwindow *window = setup(1200, 800, &state);
     run(window);

@@ -234,7 +234,6 @@ void neopad_renderer_begin_frame(neopad_renderer_t this) {
         glm_vec2_copy(interp_camera, this->camera);
     }
 
-    // todo: use delta_t here also
     float zoom_tol = 0.03f;
     if (fabsf(this->zoom - this->target_zoom) < zoom_tol) {
         this->zoom = this->target_zoom;
