@@ -38,7 +38,9 @@
 #define IF_3_RECT(...)
 #define IF_4_RECT(...) __VA_ARGS__
 
-#define NEOPAD_VEC_TYPE(__scalar, __glm, __n)              \
+#define NEOPAD_VEC_TYPE(__glm, __n) neopad_##__glm##__n##_t
+
+#define NEOPAD_VEC_TYPE_DECL(__scalar, __glm, __n)         \
     typedef union {                                        \
         /* As a CGLM vector. */                            \
         __glm##__n vec;                                    \
@@ -74,19 +76,19 @@
             __scalar right;                                \
             __scalar bottom;                               \
         };)                                                \
-    } neopad_##__glm##__n##_t;                             \
+    } NEOPAD_VEC_TYPE(__glm, __n);                         \
     /* Avoid any gotchas with alignment or padding. */     \
     _Static_assert(                                        \
         sizeof(neopad_##__glm##__n##_t) == sizeof(__glm##__n), \
         "neopad_" #__glm #__n "_t is not the same size as " #__glm #__n \
     )
 
-NEOPAD_VEC_TYPE(int, ivec, 2);
-NEOPAD_VEC_TYPE(int, ivec, 3);
-NEOPAD_VEC_TYPE(int, ivec, 4);
-NEOPAD_VEC_TYPE(float, vec, 2);
-NEOPAD_VEC_TYPE(float, vec, 3);
-NEOPAD_VEC_TYPE(float, vec, 4);
+NEOPAD_VEC_TYPE_DECL(int, ivec, 2);
+NEOPAD_VEC_TYPE_DECL(int, ivec, 3);
+NEOPAD_VEC_TYPE_DECL(int, ivec, 4);
+NEOPAD_VEC_TYPE_DECL(float, vec, 2);
+NEOPAD_VEC_TYPE_DECL(float, vec, 3);
+NEOPAD_VEC_TYPE_DECL(float, vec, 4);
 
 ///* vec4 (x, y, width, height) */                   \
 //IF_##_width##_POS_SIZE(struct {                    \
