@@ -9,7 +9,7 @@
 #define NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
 
 #include "bx/platform.h"
-#include "../../../../../../cmake-build-debug/_deps/bgfx-src/bgfx/include/bgfx/c99/bgfx.h"
+#include "bgfx/c99/bgfx.h"
 
 // Fills for macros missing from C99 BGFX.
 #ifndef BX_CONCATENATE
@@ -20,8 +20,6 @@
 #ifndef BX_COUNTOF
 #define BX_COUNTOF(x) ((sizeof(x) / sizeof(*(x))) - 1)
 #endif
-
-#include "../../../../../../cmake-build-debug/_deps/bgfx-src/bgfx/include/bgfx/c99/bgfx.h"
 
 #define BGFX_EMBEDDED_SHADER_DXBC(...)
 #define BGFX_EMBEDDED_SHADER_DX9BC(...)

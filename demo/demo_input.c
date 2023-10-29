@@ -4,6 +4,7 @@
 
 #include "demo.h"
 #include "util.h"
+#include "neopad/renderer.h"
 
 void error_callback(int error, const char *description) {
     eprintf("GLFW Error: %s\n", description);

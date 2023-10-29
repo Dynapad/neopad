@@ -16,16 +16,17 @@
 #include "neopad/types.h"
 #include "neopad/renderer.h"
 #include "neopad/internal/renderer/module.h"
-#include "neopad/internal/shims/bx/thread.h"
+
+typedef struct bx_thread_s *bx_thread_t;
 
 // todo: these defines could collide?
 
-#define PROGRAM_BASIC 0
-#define PROGRAM_BACKGROUND 1
-#define PROGRAM_COUNT 2
+#define NEOPAD_PROGRAM_BASIC 0
+#define NEOPAD_PROGRAM_BACKGROUND 1
+#define NEOPAD_PROGRAM_COUNT 2
 
-#define VIEW_BACKGROUND 0
-#define VIEW_CONTENT 1
+#define NEOPAD_VIEW_BACKGROUND 0
+#define NEOPAD_VIEW_CONTENT 1
 
 /// @note This is a pad-world coordinate.
 /// @note At zoom 1.0, these coordinates map to logical pixels.
@@ -98,7 +99,7 @@ struct neopad_renderer_s {
     bgfx_vertex_layout_t vertex_layout;
 
     /// Programs (shader pipelines)
-    bgfx_program_handle_t programs[PROGRAM_COUNT];
+    bgfx_program_handle_t programs[NEOPAD_PROGRAM_COUNT];
 
     /// Uniforms
     neopad_renderer_uniforms_t uniforms;

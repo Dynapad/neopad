@@ -7,7 +7,8 @@
 
 #include "platform.h"
 #include <neopad/types.h>
-#include <neopad/renderer.h>
+
+typedef struct neopad_renderer_s *neopad_renderer_t;
 
 /** GLFW callbacks: demo_input.c */
 void error_callback(int error, const char *description);

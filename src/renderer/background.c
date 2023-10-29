@@ -20,7 +20,7 @@ uint16_t NDC_QUAD_INDICES[] = {
 };
 
 void on_setup(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {
-    renderer->programs[PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
+    renderer->programs[NEOPAD_PROGRAM_BACKGROUND] = bgfx_create_embedded_program(
             embedded_shaders,
             bgfx_get_renderer_type(),
             "vs_grid",
@@ -63,7 +63,7 @@ void on_render(neopad_renderer_module_background_t this, neopad_renderer_t rende
                    | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_DST_ALPHA),
                    0);
 
-    bgfx_submit(view_id, renderer->programs[PROGRAM_BACKGROUND], 0, false);
+    bgfx_submit(view_id, renderer->programs[NEOPAD_PROGRAM_BACKGROUND], 0, false);
 }
 
 void on_end_frame(neopad_renderer_module_background_t this, neopad_renderer_t renderer) {

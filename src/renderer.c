@@ -41,7 +41,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Populate modules
     this->modules[NEOPAD_RENDERER_MODULE_BACKGROUND] = neopad_renderer_module_background_create(
-            VIEW_BACKGROUND,
+            NEOPAD_VIEW_BACKGROUND,
             this->init.background.color,
             this->init.background.grid_enabled,
             this->init.background.grid_major,
@@ -83,7 +83,7 @@ void neopad_renderer_init(neopad_renderer_t this, neopad_renderer_init_t init) {
 
     // Initialize basic program (others handled in modules)
     bgfx_renderer_type_t renderer_type = bgfx_get_renderer_type();
-    this->programs[PROGRAM_BASIC] = bgfx_create_embedded_program(
+    this->programs[NEOPAD_PROGRAM_BASIC] = bgfx_create_embedded_program(
             embedded_shaders,
             renderer_type,
             "vs_basic",
@@ -116,8 +116,8 @@ void neopad_renderer_shutdown(neopad_renderer_t this) {
     }
 
     bgfx_destroy_uniform(this->uniform_handle);
-    bgfx_destroy_program(this->programs[PROGRAM_BACKGROUND]);
-    bgfx_destroy_program(this->programs[PROGRAM_BASIC]);
+    bgfx_destroy_program(this->programs[NEOPAD_PROGRAM_BACKGROUND]);
+    bgfx_destroy_program(this->programs[NEOPAD_PROGRAM_BASIC]);
     bgfx_shutdown();
 }
 
@@ -297,9 +297,9 @@ void neopad_renderer_end_frame(neopad_renderer_t this) {
     float t = height / 2.0f;
     glm_ortho(l / zoom, r / zoom, b / zoom, t / zoom, -1.0f, 1.0f, this->proj);
 
-    bgfx_set_view_transform(VIEW_CONTENT, this->model_view, this->proj);
-    bgfx_set_view_rect(VIEW_CONTENT, 0, 0, this->width, this->height);
-    bgfx_touch(VIEW_CONTENT);
+    bgfx_set_view_transform(NEOPAD_VIEW_CONTENT, this->model_view, this->proj);
+    bgfx_set_view_rect(NEOPAD_VIEW_CONTENT, 0, 0, this->width, this->height);
+    bgfx_touch(NEOPAD_VIEW_CONTENT);
 
     for (int i = 0; i < NEOPAD_RENDERER_MODULE_COUNT; i++) {
         neopad_renderer_module_t mod = this->modules[i];
@@ -367,5 +367,5 @@ void neopad_renderer_draw_test_rect(neopad_renderer_t this, float l, float t, fl
     bgfx_set_state(BGFX_STATE_WRITE_RGB
                    | BGFX_STATE_WRITE_A
                    | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA), 0);
-    bgfx_submit(VIEW_CONTENT, this->programs[PROGRAM_BASIC], 0, false);
+    bgfx_submit(NEOPAD_VIEW_CONTENT, this->programs[NEOPAD_PROGRAM_BASIC], 0, false);
 }
