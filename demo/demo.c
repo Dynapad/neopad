@@ -1,5 +1,7 @@
 // Most of the important includes have configuration, and are included via platform.h.
-#include "platform.h"
+
+#include <string.h>
+
 #include "demo.h"
 #include "util.h"
 
