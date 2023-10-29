@@ -6,8 +6,6 @@
 
 #include <string.h>
 
-#include "bgfx/c99/bgfx.h"
-
 bgfx_shader_handle_t bgfx_create_embedded_shader(
         const bgfx_embedded_shader_t *_es,
         enum bgfx_renderer_type _type,

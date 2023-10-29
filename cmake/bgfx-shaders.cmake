@@ -7,8 +7,8 @@ function(add_shaders_directory SHADERS_DIR TARGET_OUT_VAR)
         return()
     endif()
 
-    file(GLOB VERTEX_SHADER_FILES CONFIGURE_DEPENDS FOLLOW_SYMLINKS "${SHADERS_DIR}/vs_*.sc")
-    file(GLOB FRAGMENT_SHADER_FILES CONFIGURE_DEPENDS FOLLOW_SYMLINKS "${SHADERS_DIR}/fs_*.sc")
+    file(GLOB VERTEX_SHADER_FILES CONFIGURE_DEPENDS FOLLOW_SYMLINKS "${SHADERS_DIR}/vs_*[!.def].sc")
+    file(GLOB FRAGMENT_SHADER_FILES CONFIGURE_DEPENDS FOLLOW_SYMLINKS "${SHADERS_DIR}/fs_*[!.def].sc")
 
     if(NOT VERTEX_SHADER_FILES AND NOT FRAGMENT_SHADER_FILES)
         message(NOTICE "No shader files in directory")
@@ -57,8 +57,21 @@ function(add_shaders_directory SHADERS_DIR TARGET_OUT_VAR)
     )
 
     set(OUTPUT_FILES)
-    list(APPEND OUTPUT_FILES ${VERTEX_OUTPUT_FILES})
-    list(APPEND OUTPUT_FILES ${FRAGMENT_OUTPUT_FILES})
+    # TODO: Remove when https://github.com/bkaradzic/bgfx.cmake/pull/199 gets submitted
+    # TEMPORARY SECTION
+
+    foreach(SHADER_FILE IN LISTS VERTEX_SHADER_FILES FRAGMENT_SHADER_FILES)
+        get_filename_component(SHADER_FILE_BASENAME ${SHADER_FILE} NAME)
+        foreach(PROFILE ${PROFILES})
+            _bgfx_get_profile_ext(${PROFILE} PROFILE_EXT)
+            list(APPEND OUTPUT_FILES "${SHADERS_OUT_DIR}/${SHADER_FILE_BASENAME}.${PROFILE_EXT}.bin.h")
+        endforeach()
+    endforeach()
+
+    # TEMPORARY SECTION END
+
+    # list(APPEND OUTPUT_FILES ${VERTEX_OUTPUT_FILES})
+    # list(APPEND OUTPUT_FILES ${FRAGMENT_OUTPUT_FILES})
 
     list(LENGTH OUTPUT_FILES SHADER_COUNT)
     if(SHADER_COUNT EQUAL 0)
