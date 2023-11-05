@@ -8,6 +8,7 @@
 #ifndef NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
 #define NEOPAD_SHIMS_BX_EMBEDDED_SHADER_H
 
+#include <stdint.h>
 #include "bx/platform.h"
 #include "bgfx/c99/bgfx.h"
 
@@ -31,9 +32,12 @@
 #define BGFX_EMBEDDED_SHADER_SPIRV(...)
 
 #define BGFX_PLATFORM_SUPPORTS_DX9BC (0 \
+    || BX_PLATFORM_LINUX                \
     || BX_PLATFORM_WINDOWS              \
     )
 #define BGFX_PLATFORM_SUPPORTS_DXBC (0  \
+    || BX_PLATFORM_LINUX                \
+    || BX_PLATFORM_WINDOWS              \
     || BX_PLATFORM_WINRT                \
     || BX_PLATFORM_XBOXONE              \
     )
